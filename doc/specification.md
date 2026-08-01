@@ -145,6 +145,12 @@ retry count, elapsed time, throughput in messages per second, and ETA when a
 non-zero throughput makes it calculable. The application publishes through a
 port; the infrastructure adapter renders the snapshot to structured logs.
 
+The Gmail adapter is verified at the HTTP boundary with deterministic mocked
+responses. Integration fixtures cover page-token traversal, multipart batch
+success and per-item throttling failures, retrying only failed message IDs, and
+filesystem checkpoint continuation. They require neither network access nor a
+real mailbox.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google
