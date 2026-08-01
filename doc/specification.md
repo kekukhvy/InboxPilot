@@ -158,6 +158,10 @@ excludes sender and domain entries carrying any of them, and ranks the remaining
 entries by descending message volume, then unread count, then stable key. Gmail
 system labels do not make an entry user-classified.
 
+Sender-label conflict analysis accepts explicit incompatible-label groups.
+Whenever a sender carries at least two labels from one group, the report records
+the sorted conflicting labels and that sender's representative sample subjects.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google
