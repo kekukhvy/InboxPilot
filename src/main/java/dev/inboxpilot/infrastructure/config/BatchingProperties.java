@@ -31,8 +31,8 @@ public record BatchingProperties(
 
     static final int MIN_BATCH_SIZE = 1;
 
-    /** Gmail rejects batch requests larger than this. */
-    static final int MAX_BATCH_SIZE = 100;
+    /** Conservative application limit for reliable Gmail batch requests. */
+    static final int MAX_BATCH_SIZE = 50;
 
     /** Zero is valid: it means fail fast, without retrying. */
     static final int MIN_RETRIES = 0;

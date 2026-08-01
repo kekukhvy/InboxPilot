@@ -19,7 +19,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 class InboxPilotPropertiesTest {
 
     private static final int EXPECTED_MAX_MESSAGES = 50_000;
-    private static final int EXPECTED_BATCH_SIZE = 100;
+    private static final int EXPECTED_BATCH_SIZE = 50;
     private static final int EXPECTED_MAX_RETRIES = 5;
     private static final int EXPECTED_CHECKPOINT_INTERVAL = 500;
     private static final Duration EXPECTED_LOOKBACK = Duration.ofDays(365);

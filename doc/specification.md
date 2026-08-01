@@ -84,8 +84,17 @@ expires, and sends no mailbox mutation request. Missing message collections are
 treated as empty pages. Provider I/O failures are translated to
 `MailboxGatewayException` with the original cause retained.
 
-Fetching message headers, label IDs attached to messages, and other metadata is
-deliberately deferred to issue #11; this gateway discovers identifiers only.
+The message source discovers IDs with an `after:<epoch-seconds>` Gmail query,
+then retrieves messages through Gmail HTTP batch requests. Each request uses the
+`metadata` format and restricts the response to the message ID, internal date,
+label IDs, and the `From` and `Subject` headers, so message bodies are never
+downloaded. The configurable batch size defaults to and is capped at 50.
+
+Batch callbacks capture failures against their individual message IDs. Failed
+items are reported as warnings while successful metadata from the same batch is
+retained and translated into provider-independent `MailMessage` values. A
+failure of the enclosing HTTP batch remains a mailbox read failure because no
+per-message response is then available.
 
 The existing CLI exposes this slice through the read-only `labels list` and
 `messages list --query=<gmail-query>` commands. Results are rendered one per

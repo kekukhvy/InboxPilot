@@ -52,9 +52,9 @@ class ConfigurationValidationTest {
         }
 
         @Test
-        @DisplayName("a batch larger than the Gmail limit")
+        @DisplayName("a batch larger than the safe application limit")
         void rejectsOversizedBatch() {
-            assertStartupFailsNaming(BATCH_SIZE_KEY, BATCH_SIZE_KEY + "=101");
+            assertStartupFailsNaming(BATCH_SIZE_KEY, BATCH_SIZE_KEY + "=51");
         }
 
         @Test

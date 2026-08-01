@@ -103,6 +103,11 @@ class GmailGatewayTest {
             return pages.get(pageIndex++);
         }
 
+        @Override
+        public GmailMetadataBatch getMessageMetadata(List<String> messageIds) {
+            return new GmailMetadataBatch(List.of(), List.of());
+        }
+
         private void failWhenConfigured() throws IOException {
             if (failure != null) {
                 throw failure;

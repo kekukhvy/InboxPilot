@@ -8,4 +8,6 @@ interface GmailApiClient {
     List<GmailLabel> listLabels() throws IOException;
 
     GmailMessagePage listMessageIds(String query, String pageToken) throws IOException;
+
+    GmailMetadataBatch getMessageMetadata(List<String> messageIds) throws IOException;
 }
