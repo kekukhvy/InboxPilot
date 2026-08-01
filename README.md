@@ -142,6 +142,42 @@ All keys are under the `inboxpilot.` prefix.
 |---|---|---|
 | `logging.level.root` | Log level for everything | `INFO` |
 | `logging.level.dev.inboxpilot` | Log level for InboxPilot's own code | `INFO` |
+| `logging.pattern.console` | Console line format, including the operational context | see below |
+
+#### Reading the logs
+
+While an operation is running, InboxPilot appends its context to each log line
+on an indented second line:
+
+```
+17:24:11.207  INFO d.i.i.gmail.GmailFetcher    - Fetching message
+  operation=gmail.fetch, messageId=18f2a1c9d0, attempt=2
+```
+
+The fields are `name=value` pairs, so they can be grepped or parsed:
+
+| Field | Meaning |
+|---|---|
+| `operation` | What is running, e.g. `gmail.fetch` |
+| `messageId` | The message being processed, when one applies |
+| `attempt` | Which try this is; `1` is the first, not a retry |
+| `elapsedMs` | How long the operation took, written when it ends |
+| `outcome` | `success`, `failure`, or `unknown` |
+| `failure` | `TRANSIENT` (retrying may work) or `PERMANENT` (it will not) |
+
+Lines logged outside any operation — startup, shutdown — carry no such block.
+Field order varies between lines; match on the field name rather than position.
+
+`failure=TRANSIENT` means InboxPilot hit a rate limit, timeout, or server error
+and the operation is worth retrying. `failure=PERMANENT` means it will never
+succeed as issued — a revoked token, a missing mailbox, an unparseable rule —
+and something has to change before the run can work.
+
+To find everything about one message across a run:
+
+```bash
+./gradlew bootRun 2>&1 | grep -A1 'messageId=18f2a1c9d0'
+```
 
 ### Secrets
 

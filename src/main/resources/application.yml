@@ -10,6 +10,21 @@ logging:
   level:
     root: INFO
     dev.inboxpilot: INFO
+  pattern:
+    # Appends the operational context (operation, messageId, attempt, elapsedMs,
+    # outcome, failure) that OperationContext puts in the MDC, so a line says
+    # which operation and which message it belongs to — issue #5.
+    #
+    # %X prints only the keys actually present, so the optional ones (a message
+    # id and an attempt do not always apply) leave no empty placeholders.
+    # %replace moves the block onto its own indented line and drops it entirely
+    # when no operation is in progress, keeping startup logs clean.
+    #
+    # Key order is not stable: Logback backs the MDC with a HashMap, so %X
+    # iterates in hash order. Listing the keys individually would fix the order
+    # but print an empty `key=` for every absent one, which reads worse. The
+    # fields are name=value pairs, so tooling matches on the name, not position.
+    console: "%clr(%d{HH:mm:ss.SSS}){faint} %clr(%5p) %clr(%-40.40logger{39}){cyan} %clr(-){faint} %m%replace(%X){'^(.+)$', '\n  $1'}%n%wEx"
 
 inboxpilot:
   oauth:
