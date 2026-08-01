@@ -124,6 +124,12 @@ visible name, while message discovery prints IDs only. Starting the application
 without a command performs no Gmail request, preserving the unconfigured
 development startup path.
 
+The read-only `analyze` command scans the configured window, aggregates message
+metadata, and evaluates unclassified senders/domains plus user-label structure.
+Its deterministic summary reports processed messages, unclassified entries,
+unused user labels, and duplicate user-label name groups. Gmail system labels
+are excluded and the workflow exposes no mutation port.
+
 ## Persisted contracts
 
 OAuth refresh-token persistence is owned by Google's file data-store
