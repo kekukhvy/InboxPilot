@@ -61,6 +61,11 @@ inboxpilot:
       - CSV
     overwrite: false
 
+  ai:
+    enabled: ${INBOXPILOT_AI_ENABLED:false}
+    include-redacted-subject: ${INBOXPILOT_AI_INCLUDE_SUBJECT:false}
+    include-label-ids: ${INBOXPILOT_AI_INCLUDE_LABELS:false}
+
   checkpoints:
     enabled: true
     file: ${INBOXPILOT_CHECKPOINT_FILE:./.inboxpilot/checkpoint.json}

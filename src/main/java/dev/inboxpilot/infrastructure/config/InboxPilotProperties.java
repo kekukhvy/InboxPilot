@@ -19,6 +19,7 @@ import org.springframework.validation.annotation.Validated;
  * @param batching    how requests are batched and retried
  * @param reports     where generated reports are written
  * @param checkpoints resumable-progress storage
+ * @param ai          optional AI data-sharing controls
  */
 @Validated
 @ConfigurationProperties(prefix = InboxPilotProperties.PREFIX)
@@ -27,7 +28,8 @@ public record InboxPilotProperties(
         @Valid @NotNull ScanningProperties scanning,
         @Valid @NotNull BatchingProperties batching,
         @Valid @NotNull ReportProperties reports,
-        @Valid @NotNull CheckpointProperties checkpoints) {
+        @Valid @NotNull CheckpointProperties checkpoints,
+        @Valid @NotNull AiProperties ai) {
 
     /** Prefix under which every InboxPilot setting is bound. */
     public static final String PREFIX = "inboxpilot";

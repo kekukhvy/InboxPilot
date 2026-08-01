@@ -39,6 +39,7 @@ class InboxPilotPropertiesTest {
         assertThat(properties.batching()).isNotNull();
         assertThat(properties.reports()).isNotNull();
         assertThat(properties.checkpoints()).isNotNull();
+        assertThat(properties.ai()).isNotNull();
     }
 
     @Test
@@ -94,6 +95,14 @@ class InboxPilotPropertiesTest {
         assertThat(checkpoints.enabled()).isTrue();
         assertThat(checkpoints.file()).isNotNull();
         assertThat(checkpoints.interval()).isEqualTo(EXPECTED_CHECKPOINT_INTERVAL);
+    }
+
+    @Test
+    @DisplayName("keeps all AI data sharing disabled by default")
+    void disablesAiByDefault() {
+        assertThat(properties.ai().enabled()).isFalse();
+        assertThat(properties.ai().includeRedactedSubject()).isFalse();
+        assertThat(properties.ai().includeLabelIds()).isFalse();
     }
 
     @Test
