@@ -116,6 +116,14 @@ checkpoints, reports, or other serialized models are versioned contracts:
 incompatible field changes must update their version marker and handle older
 versions deliberately.
 
+Scan checkpoints use a versioned binary contract containing the canonical
+configuration/query fingerprint and every provider-independent message gathered
+so far. Writes go to a same-directory temporary file and replace the checkpoint
+with an atomic move; filesystems without atomic-move support reject the write.
+Resume rejects a fingerprint mismatch instead of combining incompatible scan
+state. `checkpoint reset` is the explicit destructive command for discarding
+saved progress.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google

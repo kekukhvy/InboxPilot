@@ -3,6 +3,7 @@ package dev.inboxpilot.cli;
 import dev.inboxpilot.application.model.MailboxLabel;
 import dev.inboxpilot.application.port.MailboxGateway;
 import dev.inboxpilot.application.port.MessageSource;
+import dev.inboxpilot.application.port.CheckpointStore;
 import dev.inboxpilot.domain.message.MessageId;
 import java.util.Arrays;
 import java.util.List;
@@ -28,13 +29,17 @@ public class InboxPilotCommand implements ApplicationRunner {
 
     private static final String LABELS_COMMAND = "labels";
     private static final String MESSAGES_COMMAND = "messages";
+    private static final String CHECKPOINT_COMMAND = "checkpoint";
+    private static final String RESET_ACTION = "reset";
+    private static final String RESET_CONFIRMATION = "Checkpoint reset";
     private static final String LIST_ACTION = "list";
     private static final String OPTION_PREFIX = "--";
     private static final String QUERY_PREFIX = OPTION_PREFIX + "query=";
     private static final String LABEL_SEPARATOR = "\t";
     private static final String OUTPUT_TEMPLATE = "{}";
     private static final String READY_TEMPLATE = "InboxPilot CLI ready, reading messages via {}";
-    private static final String USAGE = "Usage: labels list | messages list --query=<gmail-query>";
+    private static final String USAGE =
+            "Usage: labels list | messages list --query=<gmail-query> | checkpoint reset";
     private static final int COMMAND_INDEX = 0;
     private static final int ACTION_INDEX = 1;
     private static final int REQUIRED_COMMAND_PARTS = 2;
@@ -43,14 +48,19 @@ public class InboxPilotCommand implements ApplicationRunner {
 
     private final MessageSource messageSource;
     private final MailboxGateway mailboxGateway;
+    private final CheckpointStore checkpointStore;
 
     /**
      * @param messageSource  the port used to retrieve complete messages
      * @param mailboxGateway the port used to discover labels and message ids
      */
-    public InboxPilotCommand(MessageSource messageSource, MailboxGateway mailboxGateway) {
+    public InboxPilotCommand(
+            MessageSource messageSource,
+            MailboxGateway mailboxGateway,
+            CheckpointStore checkpointStore) {
         this.messageSource = messageSource;
         this.mailboxGateway = mailboxGateway;
+        this.checkpointStore = checkpointStore;
     }
 
     /**
@@ -96,6 +106,10 @@ public class InboxPilotCommand implements ApplicationRunner {
                     .map(MessageId::value)
                     .toList();
         }
+        if (isAction(commandParts, CHECKPOINT_COMMAND, RESET_ACTION)) {
+            checkpointStore.reset();
+            return List.of(RESET_CONFIRMATION);
+        }
         throw new IllegalArgumentException(USAGE);
     }
 
@@ -106,9 +120,13 @@ public class InboxPilotCommand implements ApplicationRunner {
     }
 
     private static boolean isCommand(List<String> arguments, String command) {
+        return isAction(arguments, command, LIST_ACTION);
+    }
+
+    private static boolean isAction(List<String> arguments, String command, String action) {
         return arguments.size() >= REQUIRED_COMMAND_PARTS
                 && command.equals(arguments.get(COMMAND_INDEX))
-                && LIST_ACTION.equals(arguments.get(ACTION_INDEX));
+                && action.equals(arguments.get(ACTION_INDEX));
     }
 
     private static String requireQuery(String[] arguments) {
