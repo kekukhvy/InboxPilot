@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: inboxpilot
+  main:
+    # InboxPilot is a CLI-style tool, not a server: the context starts, does its
+    # work, and exits. Issue #9+ add the Gmail adapters that run inside it.
+    web-application-type: none
+
+logging:
+  level:
+    root: INFO
+    dev.inboxpilot: INFO

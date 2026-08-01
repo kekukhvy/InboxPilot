@@ -1,0 +1,25 @@
+# Build output
+build/
+out/
+bin/
+
+# Gradle
+.gradle/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+
+# OS
+.DS_Store
+
+# Local secrets and OAuth tokens — never commit these
+*.local
+credentials.json
+tokens/

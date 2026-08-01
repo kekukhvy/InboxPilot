@@ -1,0 +1,17 @@
+# Centralized dependency versions.
+# Every version this build resolves is declared here — no version literals in
+# build.gradle.kts. See .claude/GUIDELINES.md (no inline literals).
+
+[versions]
+java = "21"
+spring-boot = "4.1.0"
+spring-dependency-management = "1.1.7"
+
+[libraries]
+spring-boot-starter = { module = "org.springframework.boot:spring-boot-starter" }
+spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
+assertj-core = { module = "org.assertj:assertj-core" }
+
+[plugins]
+spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
+spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "spring-dependency-management" }
