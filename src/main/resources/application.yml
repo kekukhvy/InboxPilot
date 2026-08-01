@@ -10,3 +10,41 @@ logging:
   level:
     root: INFO
     dev.inboxpilot: INFO
+
+inboxpilot:
+  oauth:
+    # Set to true once Gmail credentials are in place (issue #9); credentials
+    # are validated only when enabled, so the app runs before OAuth is set up.
+    enabled: ${INBOXPILOT_OAUTH_ENABLED:false}
+    # Credentials come from the environment — never commit them. See
+    # application-example.yml and the README's Configuration section.
+    client-id: ${INBOXPILOT_OAUTH_CLIENT_ID:}
+    client-secret: ${INBOXPILOT_OAUTH_CLIENT_SECRET:}
+    token-store: ${INBOXPILOT_TOKEN_STORE:${user.home}/.inboxpilot/tokens}
+    scopes:
+      - https://www.googleapis.com/auth/gmail.readonly
+      - https://www.googleapis.com/auth/gmail.modify
+
+  scanning:
+    lookback: 365d
+    max-messages: 50000
+    include-spam: false
+    include-trash: false
+
+  batching:
+    batch-size: 100
+    max-retries: 5
+    initial-backoff: 1s
+    max-backoff: 60s
+
+  reports:
+    output-directory: ${INBOXPILOT_REPORT_DIR:./reports}
+    formats:
+      - JSON
+      - HTML
+    overwrite: false
+
+  checkpoints:
+    enabled: true
+    file: ${INBOXPILOT_CHECKPOINT_FILE:./.inboxpilot/checkpoint.json}
+    interval: 500

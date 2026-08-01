@@ -19,7 +19,31 @@ bin/
 # OS
 .DS_Store
 
-# Local secrets and OAuth tokens — never commit these
+# ---------------------------------------------------------------------------
+# Secrets — never commit these
+#
+# Real settings live in a local config file or in environment variables. Only
+# config/application-example.yml, which holds placeholders, is tracked.
+# ---------------------------------------------------------------------------
+
+# Local configuration overrides
+config/*.yml
+!config/application-example.yml
+config/*.yaml
+!config/application-example.yaml
+application-local.yml
+application-local.yaml
+src/main/resources/application-local.yml
+src/main/resources/application-local.yaml
 *.local
+.env
+.env.*
+
+# Google OAuth client secrets and cached tokens
 credentials.json
+client_secret*.json
 tokens/
+.inboxpilot/
+
+# Generated output
+reports/

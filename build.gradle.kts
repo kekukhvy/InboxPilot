@@ -21,6 +21,11 @@ repositories {
 
 dependencies {
     implementation(libs.spring.boot.starter)
+    implementation(libs.spring.boot.starter.validation)
+
+    // Generates IDE metadata for the @ConfigurationProperties types, so
+    // application.yml keys get completion and inline documentation.
+    annotationProcessor(libs.spring.boot.configuration.processor)
 
     testImplementation(libs.spring.boot.starter.test)
     testImplementation(libs.assertj.core)

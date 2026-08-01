@@ -1,7 +1,9 @@
 package dev.inboxpilot;
 
+import dev.inboxpilot.infrastructure.config.InboxPilotProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
 /**
  * Composition root and entry point for InboxPilot.
@@ -11,6 +13,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * class is the only place that knows how the application is bootstrapped.
  */
 @SpringBootApplication
+@EnableConfigurationProperties(InboxPilotProperties.class)
 public class InboxPilotApplication {
 
     /**
