@@ -10,6 +10,16 @@ logging:
   level:
     root: INFO
     dev.inboxpilot: INFO
+  pattern:
+    # Appends the operational context (operation, messageId, attempt, elapsedMs,
+    # outcome, failure) that OperationContext puts in the MDC, so a line says
+    # which operation and which message it belongs to — issue #5.
+    #
+    # %X prints only the keys actually present, so optional ones leave no empty
+    # placeholders; OperationContext fixes the order by the order it sets them.
+    # %replace moves the block onto its own indented line and drops it entirely
+    # when no operation is in progress, keeping startup logs clean.
+    console: "%clr(%d{HH:mm:ss.SSS}){faint} %clr(%5p) %clr(%-40.40logger{39}){cyan} %clr(-){faint} %m%replace(%X){'^(.+)$', '\n  $1'}%n%wEx"
 
 inboxpilot:
   oauth:
