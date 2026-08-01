@@ -58,8 +58,8 @@ inboxpilot:
   # Request batching and retry
   # ---------------------------------------------------------------------------
   batching:
-    # 1 .. 100 — Gmail rejects larger batches.
-    batch-size: 100
+    # 1 .. 50 — InboxPilot's safe Gmail batch limit.
+    batch-size: 50
 
     # 0 .. 10. Zero means fail fast, without retrying.
     max-retries: 5
@@ -78,7 +78,7 @@ inboxpilot:
     # One or more of: JSON, CSV, HTML.
     formats:
       - JSON
-      - HTML
+      - CSV
 
     # Whether an existing report file may be replaced.
     overwrite: false
