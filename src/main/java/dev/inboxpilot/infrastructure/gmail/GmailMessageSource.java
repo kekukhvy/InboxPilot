@@ -45,6 +45,8 @@ public class GmailMessageSource implements MessageSource {
     private static final String FETCH_LOG_MESSAGE = "Gmail fetch requested for messages since {}";
     private static final String DEGRADED_LOG_MESSAGE =
             "Gmail metadata fetch degraded for message {}: {}";
+    private static final String MALFORMED_METADATA_LOG_MESSAGE =
+            "Skipping Gmail message {} because its sender metadata is malformed";
     private static final String RETRY_LOG_MESSAGE =
             "Retrying {} Gmail metadata requests after {} (attempt {})";
     private static final Comparator<MailMessage> OLDEST_FIRST =
@@ -156,7 +158,7 @@ public class GmailMessageSource implements MessageSource {
         while (!pending.isEmpty()) {
             quotaRateLimiter.beforeMessageGetBatch(pending.size());
             GmailMetadataBatch batch = client.getMessageMetadata(pending);
-            batch.messages().stream().map(GmailMessageSource::toMailMessage).forEach(messages::add);
+            addValidMessages(batch.messages(), messages);
             pending = retryableIds(batch.failures(), retriesCompleted);
             if (!pending.isEmpty()) {
                 retriesCompleted++;
@@ -196,6 +198,17 @@ public class GmailMessageSource implements MessageSource {
     private void reportFailure(GmailMetadataFailure failure) {
         logger.warn(DEGRADED_LOG_MESSAGE,
                 failure.messageId(), failure.reason());
+    }
+
+    private void addValidMessages(
+            List<GmailMessageMetadata> metadataItems, List<MailMessage> messages) {
+        for (GmailMessageMetadata metadata : metadataItems) {
+            try {
+                messages.add(toMailMessage(metadata));
+            } catch (IllegalArgumentException exception) {
+                logger.warn(MALFORMED_METADATA_LOG_MESSAGE, metadata.id());
+            }
+        }
     }
 
     private static MailMessage toMailMessage(GmailMessageMetadata metadata) {

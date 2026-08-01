@@ -79,6 +79,21 @@ class GmailMessageSourceTest {
     }
 
     @Test
+    @DisplayName("skips malformed sender metadata without losing valid batch items")
+    void skipsMalformedSenderMetadata() {
+        StubGmailApiClient client = clientWithIds(FIRST_ID, SECOND_ID);
+        GmailMessageMetadata malformed =
+                new GmailMessageMetadata(FIRST_ID, "booking.com", SUBJECT, RECEIVED_AT, List.of());
+        client.results.add(new GmailMetadataBatch(
+                List.of(malformed, metadata(SECOND_ID)), List.of()));
+
+        List<MailMessage> messages = source(client).fetchSince(SINCE);
+
+        assertThat(messages).extracting(message -> message.id().value())
+                .containsExactly(SECOND_ID);
+    }
+
+    @Test
     @DisplayName("retries only failed messages after throttling")
     void retriesFailedMessagesAfterThrottling() {
         StubGmailApiClient client = clientWithIds(FIRST_ID, SECOND_ID);
