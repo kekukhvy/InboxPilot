@@ -230,6 +230,12 @@ a name, sender, subject, and boolean `expect-match`; the rule test runner report
 the expected and actual result without starting Spring or contacting a mailbox.
 The field is optional, so existing schema-version-1 documents remain compatible.
 
+Starter-rule generation accepts an explicit minimum message count and the known
+user-label IDs. A sender or domain becomes a candidate only when its scanned
+messages meet the threshold and map to exactly one user label. Generated rules
+have collision-resistant deterministic IDs, inventory provenance, an inert
+`add-label` action, and a positive example for review before use.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google
