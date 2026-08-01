@@ -19,7 +19,7 @@ import dev.inboxpilot.infrastructure.observability.OperationContext;
 import java.io.File;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
-import java.time.Instant;
+import java.time.Clock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -55,15 +55,14 @@ public class GoogleCredentialProvider implements CredentialProvider {
     private static final String LOCAL_USER_ID = "inboxpilot";
     private static final String OFFLINE_ACCESS_TYPE = "offline";
 
-    /** Gmail access tokens are typically valid for one hour; used only if Google omits the field. */
-    private static final long DEFAULT_TOKEN_LIFETIME_SECONDS = 3_600L;
-
     private static final Logger logger = LoggerFactory.getLogger(GoogleCredentialProvider.class);
 
     private final InboxPilotProperties properties;
+    private final CredentialAccessTokenResolver tokenResolver;
 
     public GoogleCredentialProvider(InboxPilotProperties properties) {
         this.properties = properties;
+        tokenResolver = new CredentialAccessTokenResolver(Clock.systemUTC());
     }
 
     @Override
@@ -89,7 +88,7 @@ public class GoogleCredentialProvider implements CredentialProvider {
     private AccessToken authorize(OAuthProperties configured) {
         try {
             Credential credential = runAuthorizationFlow(configured);
-            return toAccessToken(credential);
+            return tokenResolver.resolve(credential);
         } catch (IOException | GeneralSecurityException e) {
             throw OAuthFailureTranslator.translateIfPossible(e);
         }
@@ -126,10 +125,4 @@ public class GoogleCredentialProvider implements CredentialProvider {
         return new GoogleClientSecrets().setInstalled(details);
     }
 
-    private static AccessToken toAccessToken(Credential credential) {
-        Long expiresInSeconds = credential.getExpiresInSeconds();
-        long secondsUntilExpiry = expiresInSeconds != null ? expiresInSeconds : DEFAULT_TOKEN_LIFETIME_SECONDS;
-        Instant expiresAt = Instant.now().plusSeconds(secondsUntilExpiry);
-        return new AccessToken(credential.getAccessToken(), expiresAt);
-    }
 }
