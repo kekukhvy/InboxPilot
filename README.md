@@ -12,6 +12,9 @@ dry run first, so nothing changes in your mailbox until you say so.
 > [user guide](doc/user-guide.md) for the supported workflow and current CLI
 > surface.
 
+An optional local [read-only dashboard](doc/user-guide.md#optional-web-dashboard)
+is available for reviewing generated reports and YAML rules.
+
 ---
 
 ## Requirements

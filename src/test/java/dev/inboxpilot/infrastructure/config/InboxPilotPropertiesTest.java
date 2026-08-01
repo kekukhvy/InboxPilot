@@ -40,6 +40,7 @@ class InboxPilotPropertiesTest {
         assertThat(properties.reports()).isNotNull();
         assertThat(properties.checkpoints()).isNotNull();
         assertThat(properties.ai()).isNotNull();
+        assertThat(properties.dashboard()).isNotNull();
     }
 
     @Test
@@ -104,6 +105,14 @@ class InboxPilotPropertiesTest {
         assertThat(properties.ai().includeRedactedSubject()).isFalse();
         assertThat(properties.ai().includeLabelIds()).isFalse();
         assertThat(properties.ai().minimumAutomaticConfidence()).isEqualTo(0.9);
+    }
+
+    @Test
+    @DisplayName("keeps the web dashboard disabled by default")
+    void disablesDashboardByDefault() {
+        assertThat(properties.dashboard().enabled()).isFalse();
+        assertThat(properties.dashboard().rulesFile()).isNotNull();
+        assertThat(properties.dashboard().maxPreviewBytes()).isEqualTo(1_048_576);
     }
 
     @Test

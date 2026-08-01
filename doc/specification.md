@@ -329,6 +329,15 @@ Rejected suggestions are omitted. The complete accepted set is persisted as
 `accepted-ai-rules.yaml`, and the generated artifact must parse back to the same
 domain rule set.
 
+The optional web dashboard is a read-only presentation adapter. It is disabled
+by default and requires an explicit servlet application mode. Its application
+port exposes only document listing and lookup; no mailbox mutation port is
+reachable from the web layer. The filesystem adapter admits only configured
+JSON, CSV, and HTML reports plus the configured YAML rule file, omits files over
+the preview limit, returns opaque identifiers, and never exposes filesystem
+paths. Browser previews insert document content as text rather than executing
+report HTML. All dashboard HTTP routes use GET.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google

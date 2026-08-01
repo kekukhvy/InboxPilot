@@ -4,7 +4,11 @@ spring:
   main:
     # InboxPilot is a CLI-style tool, not a server: the context starts, does its
     # work, and exits. The inventory issues add the adapters that run inside it.
-    web-application-type: none
+    web-application-type: ${INBOXPILOT_WEB_APPLICATION_TYPE:none}
+
+server:
+  address: ${INBOXPILOT_DASHBOARD_ADDRESS:127.0.0.1}
+  port: ${INBOXPILOT_DASHBOARD_PORT:8080}
 
 logging:
   level:
@@ -66,6 +70,11 @@ inboxpilot:
     include-redacted-subject: ${INBOXPILOT_AI_INCLUDE_SUBJECT:false}
     include-label-ids: ${INBOXPILOT_AI_INCLUDE_LABELS:false}
     minimum-automatic-confidence: ${INBOXPILOT_AI_MIN_CONFIDENCE:0.90}
+
+  dashboard:
+    enabled: ${INBOXPILOT_DASHBOARD_ENABLED:false}
+    rules-file: ${INBOXPILOT_RULES_FILE:./rules.yaml}
+    max-preview-bytes: ${INBOXPILOT_DASHBOARD_MAX_PREVIEW_BYTES:1048576}
 
   checkpoints:
     enabled: true

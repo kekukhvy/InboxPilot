@@ -20,6 +20,7 @@ import org.springframework.validation.annotation.Validated;
  * @param reports     where generated reports are written
  * @param checkpoints resumable-progress storage
  * @param ai          optional AI data-sharing controls
+ * @param dashboard   optional read-only web dashboard
  */
 @Validated
 @ConfigurationProperties(prefix = InboxPilotProperties.PREFIX)
@@ -29,7 +30,8 @@ public record InboxPilotProperties(
         @Valid @NotNull BatchingProperties batching,
         @Valid @NotNull ReportProperties reports,
         @Valid @NotNull CheckpointProperties checkpoints,
-        @Valid @NotNull AiProperties ai) {
+        @Valid @NotNull AiProperties ai,
+        @Valid @NotNull DashboardProperties dashboard) {
 
     /** Prefix under which every InboxPilot setting is bound. */
     public static final String PREFIX = "inboxpilot";

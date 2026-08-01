@@ -135,6 +135,12 @@ Before an execute step:
 Never treat a cleanup candidate or unsubscribe link as authorization to delete,
 archive, open a URL, or send mail. Those reports are recommendations only.
 
+The optional dashboard is a local review surface, not an authenticated
+multi-user service. It exposes configured report and rule contents through GET
+requests only and applies a restrictive browser content policy. Keep it bound
+to loopback unless a trusted reverse proxy supplies transport security and
+authentication. Enabling it does not authorize mailbox writes.
+
 ## Reporting a vulnerability
 
 Do not open a public issue containing credentials, tokens, mailbox metadata, or

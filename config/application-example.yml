@@ -12,6 +12,12 @@
 # Every value here is validated at startup. A missing or out-of-range setting
 # stops the application with a message naming the offending key.
 
+# The optional dashboard server binds to loopback by default. Override only when
+# a trusted authenticated reverse proxy protects the endpoint.
+server:
+  address: 127.0.0.1
+  port: 8080
+
 inboxpilot:
 
   # ---------------------------------------------------------------------------
@@ -91,6 +97,15 @@ inboxpilot:
     include-redacted-subject: false
     include-label-ids: false
     minimum-automatic-confidence: 0.90
+
+  # ---------------------------------------------------------------------------
+  # Optional local read-only dashboard
+  # ---------------------------------------------------------------------------
+  dashboard:
+    enabled: false
+    rules-file: ./rules.yaml
+    # Larger files are omitted instead of being loaded into the browser.
+    max-preview-bytes: 1048576
 
   # ---------------------------------------------------------------------------
   # Resumable progress
