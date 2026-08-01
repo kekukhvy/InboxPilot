@@ -50,6 +50,10 @@ credential types.
 Authorization uses Google's installed-application authorization-code flow with
 a local loopback receiver. The first authorization opens the system browser;
 later authorizations reuse the refresh token stored by the Google client.
+Before returning the provider-independent access token, the adapter refreshes a
+cached Google credential when its access token is missing, expired, or within
+60 seconds of expiry. A rejected refresh or a refresh that yields no usable
+access token fails authorization instead of passing stale credentials to Gmail.
 
 Before starting the browser flow, the adapter requires OAuth to be enabled and
 requires non-blank client id and client secret values. Configuration, token
