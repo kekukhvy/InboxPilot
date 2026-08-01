@@ -16,3 +16,12 @@ rules:
       description: Classify Example newsletters
       source: manual
       tags: [bulk, newsletter]
+    tests:
+      - name: matches Example sender
+        sender: digest@example.com
+        subject: Weekly digest
+        expect-match: true
+      - name: rejects another domain
+        sender: person@other.example
+        subject: Weekly digest
+        expect-match: false

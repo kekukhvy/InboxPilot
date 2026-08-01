@@ -26,6 +26,7 @@ class RuleYamlParserTest {
             assertThat(rule.id().value()).isEqualTo("newsletter-example");
             assertThat(rule.conflictBehavior()).isEqualTo(RuleConflictBehavior.CONTINUE);
             assertThat(rule.condition().parameters()).containsEntry("value", "example.com");
+            assertThat(rule.tests()).hasSize(2);
         });
     }
 
