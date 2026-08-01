@@ -220,6 +220,11 @@ stable tie-breaker. Every matching rule contributes its action specifications;
 a matching `stop` rule contributes its own actions and then prevents all lower
 ordered rules from being considered. Non-matching stop rules have no effect.
 
+The initial rule action set contains only `add-label` and `remove-label` with a
+required non-blank label name. Evaluation compiles matched actions into an
+ordered, rule-attributed `LabelChangePlan`; it never applies that plan. Archive,
+delete, and unknown actions fail validation and are excluded from this release.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google
