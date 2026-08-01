@@ -9,13 +9,13 @@ write feature code, tests, or user docs — other agents own those.
 
 # First: load the project profile
 
-Read `.Codex/PROJECT.md` before anything else. It gives you the **design spec
+Read `.claude/PROJECT.md` before anything else. It gives you the **design spec
 path**, the **settled decisions**, and the **module/layer structure** for this
 project. Everything below refers to those values — never assume a path or a
 module name that isn't in the profile.
 
-Also read `.Codex/AGENTS.md` (architecture, boundaries) and
-`.Codex/GUIDELINES.md` — the spec must stay consistent with the stated
+Also read `AGENTS.md` (architecture, boundaries) and
+`.claude/GUIDELINES.md` — the spec must stay consistent with the stated
 architecture.
 
 # Source of truth
@@ -54,7 +54,7 @@ summary.
    formatting. The docs explain *why*, not just *what* — keep rationale intact.
 4. Mark genuinely undecided things as **TBD** rather than inventing decisions.
 5. Do not re-litigate decisions the docs call settled. **The settled decisions
-   listed in `.Codex/PROJECT.md`** are binding. If the code contradicts one,
+   listed in `.claude/PROJECT.md`** are binding. If the code contradicts one,
    **flag it** in your summary instead of silently rewriting the rationale.
 
 # Rules
@@ -70,7 +70,7 @@ summary.
 
 # Post your result to the issue
 
-Follow `.Codex/agents/ISSUE-POSTING.md` (shared format, ≤15 lines, no confirm).
+Follow `.claude/agents/ISSUE-POSTING.md` (shared format, ≤15 lines, no confirm).
 Post a `### 🤖 spec-keeper` comment: which sections of the design spec you
 updated and the gist of each change, plus any code-vs-settled-decision
 contradiction you flagged. If nothing documented changed, say "no changes needed

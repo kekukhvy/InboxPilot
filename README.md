@@ -6,9 +6,9 @@ InboxPilot inventories a Gmail mailbox, proposes a label taxonomy from what it
 finds, and applies declarative YAML rules to classify and clean up mail — with a
 dry run first, so nothing changes in your mailbox until you say so.
 
-> **Status:** early foundation. This repository currently contains the project
-> skeleton (issue #2). Gmail integration, the rule engine, and classification
-> land in later slices — see the [open issues](https://github.com/kekukhvy/InboxPilot/issues).
+> **Status:** foundation with desktop Gmail OAuth authorization. The Gmail
+> message gateway, inventory pipeline, rule engine, and classification land in
+> later slices — see the [open issues](https://github.com/kekukhvy/InboxPilot/issues).
 
 ---
 
@@ -100,7 +100,44 @@ All keys are under the `inboxpilot.` prefix.
 | `client-id` | OAuth client id from Google Cloud | from `INBOXPILOT_OAUTH_CLIENT_ID` |
 | `client-secret` | OAuth client secret — **never commit** | from `INBOXPILOT_OAUTH_CLIENT_SECRET` |
 | `token-store` | Directory caching the refresh token | `~/.inboxpilot/tokens` |
-| `scopes` | Gmail scopes requested; at least one | readonly + modify |
+| `scopes` | Gmail scopes requested; at least one | `gmail.readonly` only |
+
+#### Authorization flow and first-run setup
+
+Before your first run with `inboxpilot.oauth.enabled: true`, set up a Google Cloud OAuth desktop app:
+
+1. In [Google Cloud Console](https://console.cloud.google.com), create an OAuth 2.0 Desktop App credential.
+2. Copy the **client id** and **client secret**.
+3. Export them as environment variables (never commit them):
+   ```bash
+   export INBOXPILOT_OAUTH_CLIENT_ID='<your-client-id>'
+   export INBOXPILOT_OAUTH_CLIENT_SECRET='<your-client-secret>'
+   export INBOXPILOT_OAUTH_ENABLED=true
+   ```
+4. Run the application. It will open your system browser at Google's consent screen.
+5. Grant consent. The refresh token is cached in `~/.inboxpilot/tokens/` (or the path you set in `inboxpilot.oauth.token-store`); later runs reuse it without opening a browser.
+
+The token store directory is created automatically and set to owner-only permissions on POSIX filesystems (Linux, macOS). On filesystems without POSIX support (Windows FAT), it degrades to the platform default.
+
+**Scopes and privilege escalation:** The default scope is `gmail.readonly` for inventory and analysis only. To enable label and archive operations (cleanup) when they ship, add `gmail.modify` deliberately in your config:
+
+```yaml
+inboxpilot:
+  oauth:
+    scopes:
+      - https://www.googleapis.com/auth/gmail.readonly
+      - https://www.googleapis.com/auth/gmail.modify
+```
+
+The shipped default does not include cleanup permissions — a deliberate policy to avoid accidentally enabling data modification before you have explicitly configured it.
+
+**Error messages:** If authorization fails, InboxPilot reports the specific problem:
+
+- `inboxpilot.oauth.enabled is false. Set it to true and configure inboxpilot.oauth.client-id and inboxpilot.oauth.client-secret before requesting Gmail access.` — Enable OAuth and supply credentials.
+- `inboxpilot.oauth.client-id must not be blank when inboxpilot.oauth.enabled is true. Set the INBOXPILOT_OAUTH_CLIENT_ID environment variable (never commit it), or set inboxpilot.oauth.enabled to false until Gmail access is configured.` — The client id is missing; export `INBOXPILOT_OAUTH_CLIENT_ID`.
+- `inboxpilot.oauth.client-secret must not be blank when inboxpilot.oauth.enabled is true. Set the INBOXPILOT_OAUTH_CLIENT_SECRET environment variable (never commit it), or set inboxpilot.oauth.enabled to false until Gmail access is configured.` — The client secret is missing; export `INBOXPILOT_OAUTH_CLIENT_SECRET`.
+- `inboxpilot.oauth.token-store could not be created at <path>. Point inboxpilot.oauth.token-store (environment variable INBOXPILOT_TOKEN_STORE) at a writable directory.` — The token store directory cannot be created; verify the path is writable.
+- `The Gmail refresh token was rejected as invalid or revoked. Delete the cached token and re-authorize, or verify inboxpilot.oauth.client-id and inboxpilot.oauth.client-secret still match a Google Cloud OAuth client.` — The cached token is no longer valid. Delete `~/.inboxpilot/tokens/` and re-authorize, or verify your client credentials match an active Google Cloud OAuth app.
 
 **Scanning** (`inboxpilot.scanning.*`) — what a scan covers
 
@@ -215,7 +252,9 @@ java -jar build/libs/inboxpilot-0.1.0-SNAPSHOT.jar \
 ## Architecture
 
 InboxPilot uses a **hexagonal (ports and adapters)** architecture — see
-[ADR 0001](doc/adr/0001-hexagonal-architecture.md) for the reasoning. A single
+[the design specification](doc/specification.md),
+[ADR 0001](doc/adr/0001-hexagonal-architecture.md), and
+[ADR 0002](doc/adr/0002-desktop-oauth-authorization.md) for the reasoning. A single
 Gradle module; boundaries are enforced by package, with dependencies pointing
 inward.
 

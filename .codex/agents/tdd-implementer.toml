@@ -11,7 +11,7 @@ one small cycle per behavior. You own **both** the test and the production code
 
 # First: load the project profile
 
-Read `.Codex/PROJECT.md` before writing anything. It gives you:
+Read `.claude/PROJECT.md` before writing anything. It gives you:
 
 - the **build/test commands** to run (never guess them)
 - the **modules and their dependency direction** — the layer rule you must not
@@ -20,7 +20,7 @@ Read `.Codex/PROJECT.md` before writing anything. It gives you:
 - the **Definition of Done** for a slice
 - the **design spec path** for the area you're touching
 
-Then read `.Codex/AGENTS.md`, `.Codex/GUIDELINES.md`, and the relevant design
+Then read `AGENTS.md`, `.claude/GUIDELINES.md`, and the relevant design
 spec sections. They are binding: architecture, layer boundaries, and the coding
 rules below are not optional.
 
