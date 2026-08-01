@@ -277,6 +277,11 @@ forward plan removes and removes every label the forward plan adds; no-op
 messages are omitted. Failure to persist this artifact aborts execution before
 any mailbox write, leaving manual or future automated rollback possible.
 
+Stale-newsletter detection accepts an explicit age threshold, keeps only
+messages already classified as newsletters and strictly older than that
+threshold, then groups candidates by exact sender. Message IDs within a group
+are ordered oldest-first and each group reports its observed time range.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google
