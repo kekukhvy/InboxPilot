@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 
 import dev.inboxpilot.application.model.MailboxLabel;
 import dev.inboxpilot.application.inventory.InventoryService;
+import dev.inboxpilot.application.analysis.AnalysisService;
 import dev.inboxpilot.application.port.MailboxGateway;
 import dev.inboxpilot.application.port.MessageSource;
 import dev.inboxpilot.application.model.ScanCheckpoint;
@@ -42,6 +43,7 @@ class InboxPilotCommandTest {
     private static final String UNKNOWN_ARGUMENT = "unknown";
     private static final String CHECKPOINT_ARGUMENT = "checkpoint";
     private static final String INVENTORY_ARGUMENT = "inventory";
+    private static final String ANALYZE_ARGUMENT = "analyze";
     private static final String RESET_ARGUMENT = "reset";
     private static final String RESET_CONFIRMATION = "Checkpoint reset";
     private static final String USAGE_FRAGMENT = "labels list";
@@ -71,7 +73,8 @@ class InboxPilotCommandTest {
                         MessageSource.class,
                         MailboxGateway.class,
                         CheckpointStore.class,
-                        InventoryService.class);
+                        InventoryService.class,
+                        AnalysisService.class);
     }
 
     @Test
@@ -86,7 +89,8 @@ class InboxPilotCommandTest {
         MessageSource inMemorySource = since -> List.of(message);
 
         InboxPilotCommand command = new InboxPilotCommand(
-                inMemorySource, stubGateway, checkpointStore, inventoryService(inMemorySource));
+                inMemorySource, stubGateway, checkpointStore,
+                inventoryService(inMemorySource), analysisService(inMemorySource));
         command.reportConfiguredSource();
 
         assertThat(command.messageSource().fetchSince(Instant.EPOCH))
@@ -138,9 +142,24 @@ class InboxPilotCommandTest {
                 .containsExactly("Inventory complete: 0 messages", "Report: /tmp/inventory.json");
     }
 
+    @Test
+    @DisplayName("runs read-only mailbox analysis")
+    void runsAnalysis() {
+        assertThat(command().execute(ANALYZE_ARGUMENT))
+                .containsExactly("Analysis complete: 0 messages, 0 unclassified senders, "
+                        + "0 unclassified domains, 0 unused labels, 0 duplicate label groups");
+    }
+
     private InboxPilotCommand command() {
         return new InboxPilotCommand(
-                stubSource, stubGateway, checkpointStore, inventoryService(stubSource));
+                stubSource, stubGateway, checkpointStore,
+                inventoryService(stubSource), analysisService(stubSource));
+    }
+
+    private AnalysisService analysisService(MessageSource source) {
+        return new AnalysisService(
+                source, stubGateway, Duration.ofDays(1), 10,
+                Clock.fixed(Instant.parse("2026-08-01T12:00:00Z"), ZoneOffset.UTC));
     }
 
     private static InventoryService inventoryService(MessageSource source) {

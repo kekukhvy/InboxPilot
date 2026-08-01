@@ -1,6 +1,8 @@
 package dev.inboxpilot.cli;
 
 import dev.inboxpilot.application.model.MailboxLabel;
+import dev.inboxpilot.application.analysis.AnalysisRunResult;
+import dev.inboxpilot.application.analysis.AnalysisService;
 import dev.inboxpilot.application.inventory.InventoryRunResult;
 import dev.inboxpilot.application.inventory.InventoryService;
 import dev.inboxpilot.application.port.MailboxGateway;
@@ -33,7 +35,11 @@ public class InboxPilotCommand implements ApplicationRunner {
     private static final String MESSAGES_COMMAND = "messages";
     private static final String CHECKPOINT_COMMAND = "checkpoint";
     private static final String INVENTORY_COMMAND = "inventory";
+    private static final String ANALYZE_COMMAND = "analyze";
     private static final String INVENTORY_SUMMARY = "Inventory complete: %d messages";
+    private static final String ANALYSIS_SUMMARY =
+            "Analysis complete: %d messages, %d unclassified senders, "
+                    + "%d unclassified domains, %d unused labels, %d duplicate label groups";
     private static final String REPORT_PREFIX = "Report: ";
     private static final String RESET_ACTION = "reset";
     private static final String RESET_CONFIRMATION = "Checkpoint reset";
@@ -44,7 +50,8 @@ public class InboxPilotCommand implements ApplicationRunner {
     private static final String OUTPUT_TEMPLATE = "{}";
     private static final String READY_TEMPLATE = "InboxPilot CLI ready, reading messages via {}";
     private static final String USAGE =
-            "Usage: inventory | labels list | messages list --query=<gmail-query> | checkpoint reset";
+            "Usage: inventory | analyze | labels list | messages list --query=<gmail-query> "
+                    + "| checkpoint reset";
     private static final int COMMAND_INDEX = 0;
     private static final int ACTION_INDEX = 1;
     private static final int REQUIRED_COMMAND_PARTS = 2;
@@ -55,6 +62,7 @@ public class InboxPilotCommand implements ApplicationRunner {
     private final MailboxGateway mailboxGateway;
     private final CheckpointStore checkpointStore;
     private final InventoryService inventoryService;
+    private final AnalysisService analysisService;
 
     /**
      * @param messageSource  the port used to retrieve complete messages
@@ -64,11 +72,13 @@ public class InboxPilotCommand implements ApplicationRunner {
             MessageSource messageSource,
             MailboxGateway mailboxGateway,
             CheckpointStore checkpointStore,
-            InventoryService inventoryService) {
+            InventoryService inventoryService,
+            AnalysisService analysisService) {
         this.messageSource = messageSource;
         this.mailboxGateway = mailboxGateway;
         this.checkpointStore = checkpointStore;
         this.inventoryService = inventoryService;
+        this.analysisService = analysisService;
     }
 
     /**
@@ -111,6 +121,9 @@ public class InboxPilotCommand implements ApplicationRunner {
         }
         if (commandParts.equals(List.of(INVENTORY_COMMAND))) {
             return renderInventory(inventoryService.run());
+        }
+        if (commandParts.equals(List.of(ANALYZE_COMMAND))) {
+            return List.of(renderAnalysis(analysisService.run()));
         }
         if (isCommand(commandParts, MESSAGES_COMMAND)) {
             return mailboxGateway.listMessageIds(requireQuery(arguments)).stream()
@@ -161,5 +174,14 @@ public class InboxPilotCommand implements ApplicationRunner {
         output.add(INVENTORY_SUMMARY.formatted(result.processedMessages()));
         output.addAll(reports);
         return List.copyOf(output);
+    }
+
+    private static String renderAnalysis(AnalysisRunResult result) {
+        return ANALYSIS_SUMMARY.formatted(
+                result.processedMessages(),
+                result.unclassifiedSenders(),
+                result.unclassifiedDomains(),
+                result.unusedLabels(),
+                result.duplicateLabelGroups());
     }
 }
