@@ -1,0 +1,18 @@
+version: 1
+rules:
+  - id: newsletter-example
+    priority: 100
+    match:
+      operator: sender-domain
+      parameters:
+        value: example.com
+        ignore-case: "true"
+    actions:
+      - type: add-label
+        parameters:
+          label: Newsletters
+    conflict-behavior: continue
+    metadata:
+      description: Classify Example newsletters
+      source: manual
+      tags: [bulk, newsletter]

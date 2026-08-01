@@ -192,6 +192,13 @@ anchor navigation, and client-side sortable sender and domain tables. All
 mailbox-derived values are HTML-escaped before rendering, and the document does
 not load remote resources.
 
+Rule files are versioned YAML documents. Schema version 1 defines a stable rule
+ID, non-negative priority, one recursive match-condition tree, one or more
+provider-independent actions, explicit `continue`/`stop` conflict behavior, and
+description/source/tag metadata. IDs use lowercase letters, digits, hyphens,
+and underscores. Persisted collections are ordered and immutable after loading;
+`doc/rules.example.yaml` is the canonical example.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google
