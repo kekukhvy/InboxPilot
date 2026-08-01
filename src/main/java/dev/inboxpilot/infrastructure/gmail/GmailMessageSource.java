@@ -2,6 +2,8 @@ package dev.inboxpilot.infrastructure.gmail;
 
 import dev.inboxpilot.application.port.MessageSource;
 import dev.inboxpilot.application.port.MessageSourceException;
+import dev.inboxpilot.application.inventory.InventoryProgressTracker;
+import dev.inboxpilot.application.port.InventoryProgressReporter;
 import dev.inboxpilot.domain.message.EmailAddress;
 import dev.inboxpilot.domain.message.MailMessage;
 import dev.inboxpilot.domain.message.MessageId;
@@ -9,6 +11,7 @@ import dev.inboxpilot.infrastructure.config.BatchingProperties;
 import dev.inboxpilot.infrastructure.config.InboxPilotProperties;
 import java.io.IOException;
 import java.time.Instant;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -52,11 +55,17 @@ public class GmailMessageSource implements MessageSource {
     private final GmailApiClient client;
     private final GmailRetryPolicy retryPolicy;
     private final RetrySleeper sleeper;
+    private final InventoryProgressReporter progressReporter;
+    private final Clock clock;
     private int currentBatchSize;
 
     @Autowired
-    public GmailMessageSource(GmailApiClient client, InboxPilotProperties properties) {
-        this(client, properties.batching());
+    public GmailMessageSource(
+            GmailApiClient client,
+            InboxPilotProperties properties,
+            InventoryProgressReporter progressReporter) {
+        this(client, properties.batching(),
+                duration -> Thread.sleep(duration.toMillis()), progressReporter, Clock.systemUTC());
     }
 
     GmailMessageSource(GmailApiClient client, BatchingProperties batchingProperties) {
@@ -67,6 +76,15 @@ public class GmailMessageSource implements MessageSource {
             GmailApiClient client,
             BatchingProperties batchingProperties,
             RetrySleeper sleeper) {
+        this(client, batchingProperties, sleeper, progress -> { }, Clock.systemUTC());
+    }
+
+    GmailMessageSource(
+            GmailApiClient client,
+            BatchingProperties batchingProperties,
+            RetrySleeper sleeper,
+            InventoryProgressReporter progressReporter,
+            Clock clock) {
         this.client = client;
         this.currentBatchSize = batchingProperties.batchSize();
         this.retryPolicy = new GmailRetryPolicy(
@@ -74,6 +92,8 @@ public class GmailMessageSource implements MessageSource {
                 batchingProperties.initialBackoff(),
                 batchingProperties.maxBackoff());
         this.sleeper = sleeper;
+        this.progressReporter = progressReporter;
+        this.clock = clock;
     }
 
     @Override
@@ -81,7 +101,9 @@ public class GmailMessageSource implements MessageSource {
         logger.debug(FETCH_LOG_MESSAGE, since);
         try {
             List<String> messageIds = listAllMessageIds(QUERY_PREFIX + since.getEpochSecond());
-            return fetchBatches(messageIds).stream().sorted(OLDEST_FIRST).toList();
+            InventoryProgressTracker progress = new InventoryProgressTracker(
+                    messageIds.size(), progressReporter, clock);
+            return fetchBatches(messageIds, progress).stream().sorted(OLDEST_FIRST).toList();
         } catch (IOException exception) {
             throw new MessageSourceException(METADATA_FAILURE + exception.getMessage(), exception);
         }
@@ -102,18 +124,24 @@ public class GmailMessageSource implements MessageSource {
         return messageIds;
     }
 
-    private List<MailMessage> fetchBatches(List<String> messageIds) throws IOException {
+    private List<MailMessage> fetchBatches(
+            List<String> messageIds,
+            InventoryProgressTracker progress) throws IOException {
         List<MailMessage> messages = new ArrayList<>();
         int start = 0;
         while (start < messageIds.size()) {
             int end = Math.min(start + currentBatchSize, messageIds.size());
-            fetchWithRetries(messageIds.subList(start, end), messages);
+            fetchWithRetries(messageIds.subList(start, end), messages, progress);
+            progress.recordProcessed(end - start);
             start = end;
         }
         return List.copyOf(messages);
     }
 
-    private void fetchWithRetries(List<String> messageIds, List<MailMessage> messages)
+    private void fetchWithRetries(
+            List<String> messageIds,
+            List<MailMessage> messages,
+            InventoryProgressTracker progress)
             throws IOException {
         List<String> pending = List.copyOf(messageIds);
         int retriesCompleted = 0;
@@ -123,7 +151,7 @@ public class GmailMessageSource implements MessageSource {
             pending = retryableIds(batch.failures(), retriesCompleted);
             if (!pending.isEmpty()) {
                 retriesCompleted++;
-                pauseBeforeRetry(pending.size(), retriesCompleted);
+                pauseBeforeRetry(pending.size(), retriesCompleted, progress);
             }
         }
     }
@@ -144,8 +172,12 @@ public class GmailMessageSource implements MessageSource {
                 .toList();
     }
 
-    private void pauseBeforeRetry(int messageCount, int retryNumber) throws IOException {
+    private void pauseBeforeRetry(
+            int messageCount,
+            int retryNumber,
+            InventoryProgressTracker progress) throws IOException {
         java.time.Duration delay = retryPolicy.delayBeforeRetry(retryNumber);
+        progress.recordRetry();
         logger.warn(RETRY_LOG_MESSAGE, messageCount, delay, retryNumber);
         try {
             sleeper.sleep(delay);
