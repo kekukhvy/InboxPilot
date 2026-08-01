@@ -20,6 +20,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /** Thin wrapper around Google's generated Gmail client. */
 @Component
@@ -51,8 +52,15 @@ class GoogleGmailApiClient implements GmailApiClient {
     private Gmail gmail;
     private Instant expiresAt;
 
+    @Autowired
     GoogleGmailApiClient(CredentialProvider credentialProvider) {
         this.credentialProvider = credentialProvider;
+    }
+
+    GoogleGmailApiClient(Gmail gmail) {
+        this.credentialProvider = null;
+        this.gmail = gmail;
+        this.expiresAt = Instant.MAX;
     }
 
     @Override
