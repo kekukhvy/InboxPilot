@@ -96,6 +96,10 @@ Inventory reports are written as deterministic `inventory.csv` and
 `inventory.json` files in `inboxpilot.reports.output-directory`. Existing files
 are replaced only when `inboxpilot.reports.overwrite=true`.
 
+While an inventory scan runs, INFO logs report processed and remaining messages,
+retries, messages per second, elapsed time, and ETA. ETA remains `unknown` until
+the scan has enough elapsed progress to calculate it.
+
 ---
 
 ## Configuration
