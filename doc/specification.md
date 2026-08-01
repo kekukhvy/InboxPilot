@@ -103,8 +103,13 @@ per-message response is then available.
 Retryable item failures include Gmail quota and concurrent-request errors, HTTP
 429 responses, and transient 5xx responses. Only failed message IDs are retried;
 successful items are never requested twice. Retry delays use capped exponential
-backoff with jitter. A throttling response halves the batch size, down to one,
-for the remainder of the scan so request pressure adapts automatically.
+backoff with jitter.
+
+Metadata retrieval is paced by Gmail quota units rather than by permanently
+shrinking HTTP batches. Every inner `messages.get`, including retries, is
+charged at its documented cost against 80% of the per-user minute budget; list
+pages are charged separately. Batch size remains stable for HTTP efficiency,
+while exponential backoff still delays failed-item retries.
 
 The CLI exposes the read-only `inventory`, `labels list`, and
 `messages list --query=<gmail-query>` commands. Inventory derives its lower
