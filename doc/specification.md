@@ -271,6 +271,12 @@ scanned message metadata. Each entry is `MATCH`, `LABEL_MISMATCH`, or
 succeeds only when every planned message is present with precisely the expected
 labels.
 
+Before execution, the exact classification diff is inverted and persisted as
+`classification-rollback.json`. The version-1 artifact adds every label the
+forward plan removes and removes every label the forward plan adds; no-op
+messages are omitted. Failure to persist this artifact aborts execution before
+any mailbox write, leaving manual or future automated rollback possible.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google
