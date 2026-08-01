@@ -236,6 +236,12 @@ messages meet the threshold and map to exactly one user label. Generated rules
 have collision-resistant deterministic IDs, inventory provenance, an inert
 `add-label` action, and a positive example for review before use.
 
+Classification dry-run evaluates an ordered message batch and returns one exact
+label-state plan per message: matched rule IDs, sorted old labels, additions,
+removals, and sorted desired labels. Sequential rule actions are reduced to the
+final desired state, so cancelling changes disappear from the diff. This domain
+operation has no mailbox port and therefore cannot write to Gmail.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google
