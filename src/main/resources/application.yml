@@ -49,7 +49,7 @@ inboxpilot:
     include-trash: false
 
   batching:
-    batch-size: 100
+    batch-size: 50
     max-retries: 5
     initial-backoff: 1s
     max-backoff: 60s

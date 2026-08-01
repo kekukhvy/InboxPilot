@@ -6,10 +6,10 @@ InboxPilot inventories a Gmail mailbox, proposes a label taxonomy from what it
 finds, and applies declarative YAML rules to classify and clean up mail — with a
 dry run first, so nothing changes in your mailbox until you say so.
 
-> **Status:** foundation with desktop Gmail OAuth authorization plus label and
-> paginated message-ID discovery. Batched metadata retrieval, the inventory
-> pipeline, rule engine, and classification land in later slices — see the
-> [open issues](https://github.com/kekukhvy/InboxPilot/issues).
+> **Status:** foundation with desktop Gmail OAuth authorization, label and
+> paginated message-ID discovery, and metadata-only batch retrieval. The
+> inventory pipeline, rule engine, and classification land in later slices —
+> see the [open issues](https://github.com/kekukhvy/InboxPilot/issues).
 
 ---
 
@@ -172,7 +172,7 @@ The shipped default does not include cleanup permissions — a deliberate policy
 
 | Key | Meaning | Default |
 |---|---|---|
-| `batch-size` | Messages per batch call; `1`–`100` (Gmail's limit) | `100` |
+| `batch-size` | Metadata requests per Gmail HTTP batch; `1`–`50` | `50` |
 | `max-retries` | Retries after a retryable failure; `0`–`10` | `5` |
 | `initial-backoff` | First wait before retrying; doubles per attempt | `1s` |
 | `max-backoff` | Ceiling on backoff; must be ≥ `initial-backoff` | `60s` |
