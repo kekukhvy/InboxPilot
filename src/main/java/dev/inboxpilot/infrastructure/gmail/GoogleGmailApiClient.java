@@ -39,6 +39,13 @@ class GoogleGmailApiClient implements GmailApiClient {
     private static final String EMPTY_SUBJECT = "";
     private static final char ADDRESS_START = '<';
     private static final char ADDRESS_END = '>';
+    private static final int TOO_MANY_REQUESTS = 429;
+    private static final int SERVER_ERROR_START = 500;
+    private static final int FORBIDDEN = 403;
+    private static final String RATE_LIMIT_REASON = "rateLimitExceeded";
+    private static final String USER_RATE_LIMIT_REASON = "userRateLimitExceeded";
+    private static final String QUOTA_REASON = "quotaExceeded";
+    private static final String CONCURRENT_REASON = "concurrentLimitExceeded";
 
     private final CredentialProvider credentialProvider;
     private Gmail gmail;
@@ -101,16 +108,40 @@ class GoogleGmailApiClient implements GmailApiClient {
                 try {
                     messages.add(toMetadata(message));
                 } catch (RuntimeException exception) {
-                    failures.add(new GmailMetadataFailure(messageId, exception.getMessage()));
+                    failures.add(new GmailMetadataFailure(
+                            messageId, exception.getMessage(), false, false));
                 }
             }
 
             @Override
             public void onFailure(GoogleJsonError error, HttpHeaders responseHeaders) {
                 String reason = error == null ? UNKNOWN_FAILURE : error.getMessage();
-                failures.add(new GmailMetadataFailure(messageId, reason));
+                int statusCode = error == null ? 0 : error.getCode();
+                boolean throttled = isThrottled(error, statusCode);
+                boolean retryable = throttled || statusCode >= SERVER_ERROR_START;
+                failures.add(new GmailMetadataFailure(
+                        messageId, reason, retryable, throttled));
             }
         };
+    }
+
+    private static boolean isThrottled(GoogleJsonError error, int statusCode) {
+        if (statusCode == TOO_MANY_REQUESTS) {
+            return true;
+        }
+        if (statusCode != FORBIDDEN || error == null || error.getErrors() == null) {
+            return false;
+        }
+        return error.getErrors().stream()
+                .map(GoogleJsonError.ErrorInfo::getReason)
+                .anyMatch(GoogleGmailApiClient::isThrottleReason);
+    }
+
+    private static boolean isThrottleReason(String reason) {
+        return RATE_LIMIT_REASON.equals(reason)
+                || USER_RATE_LIMIT_REASON.equals(reason)
+                || QUOTA_REASON.equals(reason)
+                || CONCURRENT_REASON.equals(reason);
     }
 
     private static GmailMessageMetadata toMetadata(Message message) {
