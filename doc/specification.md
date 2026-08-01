@@ -205,6 +205,12 @@ exact field path (for example, `rules[0].match`) and malformed YAML is
 translated into the same actionable error type. No partially valid rule set is
 returned.
 
+Leaf rule conditions support exact sender, exact sender domain, boundary-aware
+domain suffix, subject substring, and subject regular expression matching. Each
+condition explicitly controls case sensitivity with `ignore-case`; regular
+expressions are compiled once and invalid expressions fail validation before
+evaluation.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google
