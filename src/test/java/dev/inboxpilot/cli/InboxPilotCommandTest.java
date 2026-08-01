@@ -6,12 +6,15 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import dev.inboxpilot.application.model.MailboxLabel;
 import dev.inboxpilot.application.port.MailboxGateway;
 import dev.inboxpilot.application.port.MessageSource;
+import dev.inboxpilot.application.model.ScanCheckpoint;
+import dev.inboxpilot.application.port.CheckpointStore;
 import dev.inboxpilot.domain.message.EmailAddress;
 import dev.inboxpilot.domain.message.MailMessage;
 import dev.inboxpilot.domain.message.MessageId;
 import java.lang.reflect.Constructor;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -33,15 +36,19 @@ class InboxPilotCommandTest {
     private static final String LIST_ARGUMENT = "list";
     private static final String QUERY_ARGUMENT = "--query=" + QUERY;
     private static final String UNKNOWN_ARGUMENT = "unknown";
+    private static final String CHECKPOINT_ARGUMENT = "checkpoint";
+    private static final String RESET_ARGUMENT = "reset";
+    private static final String RESET_CONFIRMATION = "Checkpoint reset";
     private static final String USAGE_FRAGMENT = "labels list";
 
     private final MessageSource stubSource = since -> List.of();
     private final StubMailboxGateway stubGateway = new StubMailboxGateway();
+    private final StubCheckpointStore checkpointStore = new StubCheckpointStore();
 
     @Test
     @DisplayName("reads through whichever port implementation it was given")
     void readsThroughTheInjectedPort() {
-        InboxPilotCommand command = new InboxPilotCommand(stubSource, stubGateway);
+        InboxPilotCommand command = command();
 
         assertThat(command.messageSource()).isSameAs(stubSource);
     }
@@ -55,7 +62,7 @@ class InboxPilotCommandTest {
 
         assertThat(constructors).hasSize(1);
         assertThat(constructors[0].getParameterTypes())
-                .containsExactly(MessageSource.class, MailboxGateway.class);
+                .containsExactly(MessageSource.class, MailboxGateway.class, CheckpointStore.class);
     }
 
     @Test
@@ -69,7 +76,7 @@ class InboxPilotCommandTest {
                 List.of());
         MessageSource inMemorySource = since -> List.of(message);
 
-        InboxPilotCommand command = new InboxPilotCommand(inMemorySource, stubGateway);
+        InboxPilotCommand command = new InboxPilotCommand(inMemorySource, stubGateway, checkpointStore);
         command.reportConfiguredSource();
 
         assertThat(command.messageSource().fetchSince(Instant.EPOCH))
@@ -80,7 +87,7 @@ class InboxPilotCommandTest {
     @DisplayName("lists real mailbox labels through the gateway")
     void listsLabels() {
         stubGateway.labels = List.of(new MailboxLabel(LABEL_ID, LABEL_NAME));
-        InboxPilotCommand command = new InboxPilotCommand(stubSource, stubGateway);
+        InboxPilotCommand command = command();
 
         assertThat(command.execute(LABELS_ARGUMENT, LIST_ARGUMENT)).containsExactly(LABEL_LINE);
     }
@@ -89,7 +96,7 @@ class InboxPilotCommandTest {
     @DisplayName("lists message ids using the requested Gmail query")
     void listsMessageIds() {
         stubGateway.messageIds = List.of(new MessageId(MESSAGE_ID_VALUE));
-        InboxPilotCommand command = new InboxPilotCommand(stubSource, stubGateway);
+        InboxPilotCommand command = command();
 
         assertThat(command.execute(MESSAGES_ARGUMENT, LIST_ARGUMENT, QUERY_ARGUMENT))
                 .containsExactly(MESSAGE_ID_VALUE);
@@ -99,11 +106,41 @@ class InboxPilotCommandTest {
     @Test
     @DisplayName("rejects an unknown command with actionable usage")
     void rejectsUnknownCommand() {
-        InboxPilotCommand command = new InboxPilotCommand(stubSource, stubGateway);
+        InboxPilotCommand command = command();
 
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> command.execute(UNKNOWN_ARGUMENT))
                 .withMessageContaining(USAGE_FRAGMENT);
+    }
+
+    @Test
+    @DisplayName("resets checkpoint only through the explicit command")
+    void resetsCheckpointExplicitly() {
+        assertThat(command().execute(CHECKPOINT_ARGUMENT, RESET_ARGUMENT))
+                .containsExactly(RESET_CONFIRMATION);
+        assertThat(checkpointStore.wasReset).isTrue();
+    }
+
+    private InboxPilotCommand command() {
+        return new InboxPilotCommand(stubSource, stubGateway, checkpointStore);
+    }
+
+    private static final class StubCheckpointStore implements CheckpointStore {
+        private boolean wasReset;
+
+        @Override
+        public Optional<ScanCheckpoint> load(String expectedFingerprint) {
+            return Optional.empty();
+        }
+
+        @Override
+        public void save(ScanCheckpoint checkpoint) {
+        }
+
+        @Override
+        public void reset() {
+            wasReset = true;
+        }
     }
 
     private static final class StubMailboxGateway implements MailboxGateway {
