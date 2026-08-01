@@ -139,6 +139,12 @@ JSON uses a stable field order and properly escapes string values. Both formats
 preserve the sorted inventory order, making repeated exports byte-for-byte
 comparable when the source inventory is unchanged.
 
+Inventory progress is published after each completed metadata batch and before
+each retry. Snapshots contain processed and remaining message counts, cumulative
+retry count, elapsed time, throughput in messages per second, and ETA when a
+non-zero throughput makes it calculable. The application publishes through a
+port; the infrastructure adapter renders the snapshot to structured logs.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google
