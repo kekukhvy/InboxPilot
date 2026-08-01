@@ -287,6 +287,12 @@ delivery status, and transient notification candidates using explicit local
 patterns. Every candidate records the matched category as its reason; messages
 with no supported signal remain outside the cleanup report.
 
+Archive cleanup defaults to `DRY_RUN` and returns the deduplicated selected
+message IDs as a preview. Only explicit `EXECUTE` invokes the archive port; its
+Gmail adapter performs one batch modification that removes only `INBOX`.
+Neither the application port nor the adapter exposes delete, trash, or any
+other state change.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google
