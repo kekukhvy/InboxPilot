@@ -82,7 +82,7 @@ class InboxPilotPropertiesTest {
 
         assertThat(reports.outputDirectory()).isNotNull();
         assertThat(reports.formats())
-                .containsExactly(ReportFormat.JSON, ReportFormat.HTML);
+                .containsExactly(ReportFormat.JSON, ReportFormat.CSV);
         assertThat(reports.overwrite()).isFalse();
     }
 
