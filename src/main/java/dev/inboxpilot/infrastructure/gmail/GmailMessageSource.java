@@ -47,8 +47,6 @@ public class GmailMessageSource implements MessageSource {
             "Gmail metadata fetch degraded for message {}: {}";
     private static final String RETRY_LOG_MESSAGE =
             "Retrying {} Gmail metadata requests after {} (attempt {})";
-    private static final int MIN_BATCH_SIZE = 1;
-    private static final int RATE_REDUCTION_DIVISOR = 2;
     private static final Comparator<MailMessage> OLDEST_FIRST =
             Comparator.comparing(MailMessage::receivedAt);
 
@@ -57,7 +55,8 @@ public class GmailMessageSource implements MessageSource {
     private final RetrySleeper sleeper;
     private final InventoryProgressReporter progressReporter;
     private final Clock clock;
-    private int currentBatchSize;
+    private final int batchSize;
+    private final GmailQuotaRateLimiter quotaRateLimiter;
 
     @Autowired
     public GmailMessageSource(
@@ -86,12 +85,13 @@ public class GmailMessageSource implements MessageSource {
             InventoryProgressReporter progressReporter,
             Clock clock) {
         this.client = client;
-        this.currentBatchSize = batchingProperties.batchSize();
+        this.batchSize = batchingProperties.batchSize();
         this.retryPolicy = new GmailRetryPolicy(
                 batchingProperties.maxRetries(),
                 batchingProperties.initialBackoff(),
                 batchingProperties.maxBackoff());
         this.sleeper = sleeper;
+        this.quotaRateLimiter = new GmailQuotaRateLimiter(sleeper);
         this.progressReporter = progressReporter;
         this.clock = clock;
     }
@@ -120,6 +120,7 @@ public class GmailMessageSource implements MessageSource {
         HashSet<String> seenPageTokens = new HashSet<>();
         String pageToken = null;
         do {
+            quotaRateLimiter.beforeMessageList();
             GmailMessagePage page = client.listMessageIds(query, pageToken);
             int remaining = maximumMessages - messageIds.size();
             messageIds.addAll(page.messageIds().stream().limit(remaining).toList());
@@ -137,7 +138,7 @@ public class GmailMessageSource implements MessageSource {
         List<MailMessage> messages = new ArrayList<>();
         int start = 0;
         while (start < messageIds.size()) {
-            int end = Math.min(start + currentBatchSize, messageIds.size());
+            int end = Math.min(start + batchSize, messageIds.size());
             fetchWithRetries(messageIds.subList(start, end), messages, progress);
             progress.recordProcessed(end - start);
             start = end;
@@ -153,6 +154,7 @@ public class GmailMessageSource implements MessageSource {
         List<String> pending = List.copyOf(messageIds);
         int retriesCompleted = 0;
         while (!pending.isEmpty()) {
+            quotaRateLimiter.beforeMessageGetBatch(pending.size());
             GmailMetadataBatch batch = client.getMessageMetadata(pending);
             batch.messages().stream().map(GmailMessageSource::toMailMessage).forEach(messages::add);
             pending = retryableIds(batch.failures(), retriesCompleted);
@@ -164,9 +166,6 @@ public class GmailMessageSource implements MessageSource {
     }
 
     private List<String> retryableIds(List<GmailMetadataFailure> failures, int retriesCompleted) {
-        if (failures.stream().anyMatch(GmailMetadataFailure::throttled)) {
-            currentBatchSize = Math.max(MIN_BATCH_SIZE, currentBatchSize / RATE_REDUCTION_DIVISOR);
-        }
         failures.stream()
                 .filter(failure -> !failure.retryable() || !retryPolicy.canRetry(retriesCompleted))
                 .forEach(this::reportFailure);

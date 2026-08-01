@@ -95,8 +95,8 @@ class GmailMessageSourceTest {
     }
 
     @Test
-    @DisplayName("reduces later batch sizes after throttling")
-    void reducesBatchSizeAfterThrottling() {
+    @DisplayName("keeps efficient batch sizes after throttling while the quota limiter paces calls")
+    void keepsBatchSizeAfterThrottling() {
         StubGmailApiClient client = clientWithIds(FIRST_ID, SECOND_ID, THIRD_ID);
         client.results.add(new GmailMetadataBatch(
                 List.of(metadata(FIRST_ID)), List.of(throttledFailure(SECOND_ID))));
