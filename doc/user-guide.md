@@ -23,11 +23,14 @@ During development, replace the `java -jar` invocation with:
 The currently exposed CLI commands are:
 
 ```text
+inventory
 labels list
 messages list --query=<gmail-query>
 checkpoint reset
 ```
 
+`inventory` scans the configured lookback window, respects `max-messages`, and
+writes every configured report format.
 `labels list` prints Gmail label ID and visible name separated by a tab.
 `messages list` accepts normal Gmail search syntax. Quote the complete Gradle
 argument when a query contains spaces.

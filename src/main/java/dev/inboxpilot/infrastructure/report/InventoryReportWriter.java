@@ -1,6 +1,7 @@
 package dev.inboxpilot.infrastructure.report;
 
 import dev.inboxpilot.domain.inventory.Inventory;
+import dev.inboxpilot.application.port.InventoryReportStore;
 import dev.inboxpilot.infrastructure.config.ReportFormat;
 import dev.inboxpilot.infrastructure.config.ReportProperties;
 import dev.inboxpilot.infrastructure.config.InboxPilotProperties;
@@ -17,7 +18,7 @@ import org.springframework.stereotype.Component;
 
 /** Writes deterministic inventory reports in configured machine-readable formats. */
 @Component
-public class InventoryReportWriter {
+public class InventoryReportWriter implements InventoryReportStore {
 
     private static final String CSV_FILE = "inventory.csv";
     private static final String JSON_FILE = "inventory.json";
@@ -38,6 +39,7 @@ public class InventoryReportWriter {
         this.properties = properties;
     }
 
+    @Override
     public List<Path> write(Inventory inventory) {
         try {
             Files.createDirectories(properties.outputDirectory());

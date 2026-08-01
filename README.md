@@ -75,6 +75,15 @@ context starts, does its work, and exits.
 
 ### Read-only Gmail commands
 
+Generate the configured mailbox inventory reports:
+
+```bash
+./gradlew bootRun --args='inventory'
+```
+
+The command scans the configured lookback window up to `scanning.max-messages`,
+then prints the processed count and every generated report path.
+
 After enabling OAuth, list the real labels in the authorized mailbox:
 
 ```bash

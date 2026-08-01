@@ -1,6 +1,8 @@
 package dev.inboxpilot.cli;
 
 import dev.inboxpilot.application.model.MailboxLabel;
+import dev.inboxpilot.application.inventory.InventoryRunResult;
+import dev.inboxpilot.application.inventory.InventoryService;
 import dev.inboxpilot.application.port.MailboxGateway;
 import dev.inboxpilot.application.port.MessageSource;
 import dev.inboxpilot.application.port.CheckpointStore;
@@ -30,6 +32,9 @@ public class InboxPilotCommand implements ApplicationRunner {
     private static final String LABELS_COMMAND = "labels";
     private static final String MESSAGES_COMMAND = "messages";
     private static final String CHECKPOINT_COMMAND = "checkpoint";
+    private static final String INVENTORY_COMMAND = "inventory";
+    private static final String INVENTORY_SUMMARY = "Inventory complete: %d messages";
+    private static final String REPORT_PREFIX = "Report: ";
     private static final String RESET_ACTION = "reset";
     private static final String RESET_CONFIRMATION = "Checkpoint reset";
     private static final String LIST_ACTION = "list";
@@ -39,7 +44,7 @@ public class InboxPilotCommand implements ApplicationRunner {
     private static final String OUTPUT_TEMPLATE = "{}";
     private static final String READY_TEMPLATE = "InboxPilot CLI ready, reading messages via {}";
     private static final String USAGE =
-            "Usage: labels list | messages list --query=<gmail-query> | checkpoint reset";
+            "Usage: inventory | labels list | messages list --query=<gmail-query> | checkpoint reset";
     private static final int COMMAND_INDEX = 0;
     private static final int ACTION_INDEX = 1;
     private static final int REQUIRED_COMMAND_PARTS = 2;
@@ -49,6 +54,7 @@ public class InboxPilotCommand implements ApplicationRunner {
     private final MessageSource messageSource;
     private final MailboxGateway mailboxGateway;
     private final CheckpointStore checkpointStore;
+    private final InventoryService inventoryService;
 
     /**
      * @param messageSource  the port used to retrieve complete messages
@@ -57,10 +63,12 @@ public class InboxPilotCommand implements ApplicationRunner {
     public InboxPilotCommand(
             MessageSource messageSource,
             MailboxGateway mailboxGateway,
-            CheckpointStore checkpointStore) {
+            CheckpointStore checkpointStore,
+            InventoryService inventoryService) {
         this.messageSource = messageSource;
         this.mailboxGateway = mailboxGateway;
         this.checkpointStore = checkpointStore;
+        this.inventoryService = inventoryService;
     }
 
     /**
@@ -101,6 +109,9 @@ public class InboxPilotCommand implements ApplicationRunner {
         if (isCommand(commandParts, LABELS_COMMAND)) {
             return mailboxGateway.listLabels().stream().map(InboxPilotCommand::renderLabel).toList();
         }
+        if (commandParts.equals(List.of(INVENTORY_COMMAND))) {
+            return renderInventory(inventoryService.run());
+        }
         if (isCommand(commandParts, MESSAGES_COMMAND)) {
             return mailboxGateway.listMessageIds(requireQuery(arguments)).stream()
                     .map(MessageId::value)
@@ -140,5 +151,15 @@ public class InboxPilotCommand implements ApplicationRunner {
 
     private static String renderLabel(MailboxLabel label) {
         return label.id() + LABEL_SEPARATOR + label.name();
+    }
+
+    private static List<String> renderInventory(InventoryRunResult result) {
+        List<String> reports = result.reports().stream()
+                .map(path -> REPORT_PREFIX + path.toAbsolutePath())
+                .toList();
+        java.util.ArrayList<String> output = new java.util.ArrayList<>();
+        output.add(INVENTORY_SUMMARY.formatted(result.processedMessages()));
+        output.addAll(reports);
+        return List.copyOf(output);
     }
 }

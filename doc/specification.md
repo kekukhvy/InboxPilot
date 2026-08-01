@@ -106,11 +106,14 @@ successful items are never requested twice. Retry delays use capped exponential
 backoff with jitter. A throttling response halves the batch size, down to one,
 for the remainder of the scan so request pressure adapts automatically.
 
-The existing CLI exposes this slice through the read-only `labels list` and
-`messages list --query=<gmail-query>` commands. Results are rendered one per
-line; labels contain their stable ID and visible name, while message discovery
-prints IDs only. Starting the application without a command performs no Gmail
-request, preserving the unconfigured development startup path.
+The CLI exposes the read-only `inventory`, `labels list`, and
+`messages list --query=<gmail-query>` commands. Inventory derives its lower
+timestamp from configured lookback, stops provider pagination at the configured
+message ceiling, aggregates the metadata, writes every configured report
+format, and prints the generated paths. Labels contain their stable ID and
+visible name, while message discovery prints IDs only. Starting the application
+without a command performs no Gmail request, preserving the unconfigured
+development startup path.
 
 ## Persisted contracts
 

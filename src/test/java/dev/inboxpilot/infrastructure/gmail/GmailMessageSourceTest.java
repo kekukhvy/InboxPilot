@@ -52,6 +52,19 @@ class GmailMessageSourceTest {
     }
 
     @Test
+    @DisplayName("stops metadata retrieval at the configured inventory ceiling")
+    void respectsMaximumMessages() {
+        StubGmailApiClient client = clientWithIds(FIRST_ID, SECOND_ID, THIRD_ID);
+        client.results.add(successfulBatch(FIRST_ID, SECOND_ID));
+
+        List<MailMessage> messages = source(client).fetchSince(SINCE, 2);
+
+        assertThat(client.requestedBatches).containsExactly(List.of(FIRST_ID, SECOND_ID));
+        assertThat(messages).extracting(message -> message.id().value())
+                .containsExactly(FIRST_ID, SECOND_ID);
+    }
+
+    @Test
     @DisplayName("keeps successful messages when one batch item fails")
     void keepsSuccessfulMessagesAfterPartialFailure() {
         StubGmailApiClient client = clientWithIds(FIRST_ID, SECOND_ID);

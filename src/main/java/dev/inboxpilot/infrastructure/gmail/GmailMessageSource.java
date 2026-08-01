@@ -98,9 +98,15 @@ public class GmailMessageSource implements MessageSource {
 
     @Override
     public List<MailMessage> fetchSince(Instant since) {
+        return fetchSince(since, Integer.MAX_VALUE);
+    }
+
+    @Override
+    public List<MailMessage> fetchSince(Instant since, int maximumMessages) {
         logger.debug(FETCH_LOG_MESSAGE, since);
         try {
-            List<String> messageIds = listAllMessageIds(QUERY_PREFIX + since.getEpochSecond());
+            List<String> messageIds = listAllMessageIds(
+                    QUERY_PREFIX + since.getEpochSecond(), maximumMessages);
             InventoryProgressTracker progress = new InventoryProgressTracker(
                     messageIds.size(), progressReporter, clock);
             return fetchBatches(messageIds, progress).stream().sorted(OLDEST_FIRST).toList();
@@ -109,18 +115,19 @@ public class GmailMessageSource implements MessageSource {
         }
     }
 
-    private List<String> listAllMessageIds(String query) throws IOException {
+    private List<String> listAllMessageIds(String query, int maximumMessages) throws IOException {
         List<String> messageIds = new ArrayList<>();
         HashSet<String> seenPageTokens = new HashSet<>();
         String pageToken = null;
         do {
             GmailMessagePage page = client.listMessageIds(query, pageToken);
-            messageIds.addAll(page.messageIds());
+            int remaining = maximumMessages - messageIds.size();
+            messageIds.addAll(page.messageIds().stream().limit(remaining).toList());
             pageToken = page.nextPageToken();
             if (pageToken != null && !seenPageTokens.add(pageToken)) {
                 throw new IOException(REPEATED_PAGE_TOKEN);
             }
-        } while (pageToken != null);
+        } while (pageToken != null && messageIds.size() < maximumMessages);
         return messageIds;
     }
 
