@@ -77,6 +77,20 @@ class GmailAdapterIntegrationTest {
         assertThat(transport.requestBodies.getLast()).contains(SECOND_ID).doesNotContain(FIRST_ID);
     }
 
+    @Test
+    @DisplayName("sends only explicit label IDs through Gmail batchModify")
+    void batchModifiesLabels() throws IOException {
+        QueueTransport transport = new QueueTransport(jsonResponse("{}"));
+
+        client(transport).batchModifyLabels(
+                List.of(FIRST_ID, SECOND_ID), List.of("Label_Add"), List.of("Label_Remove"));
+
+        assertThat(transport.urls).singleElement().asString().contains("messages/batchModify");
+        assertThat(transport.requestBodies).singleElement().asString()
+                .contains(FIRST_ID, SECOND_ID, "Label_Add", "Label_Remove")
+                .doesNotContain("UNREAD", "STARRED", "IMPORTANT", "INBOX", "TRASH");
+    }
+
     private static GoogleGmailApiClient client(QueueTransport transport) {
         Gmail gmail = new Gmail.Builder(transport, GsonFactory.getDefaultInstance(), request -> { })
                 .setRootUrl(ROOT_URL)
