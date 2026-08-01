@@ -303,6 +303,13 @@ and sorts `mailto` and HTTPS URIs, and presents them in a self-contained escaped
 HTML report. The report explicitly states that no capability was invoked;
 opening a URL or sending an unsubscribe email remains a manual user action.
 
+AI classification is disabled by default and requires explicit opt-in. The only
+provider-neutral outbound model contains sender domain, an optionally included
+locally redacted subject, and optionally included label IDs. Message IDs, sender
+local parts, bodies, attachments, and raw headers have no field in the model.
+Local redaction replaces email addresses, HTTP(S) URLs, and long numeric codes
+before an AI provider port can receive the payload.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google

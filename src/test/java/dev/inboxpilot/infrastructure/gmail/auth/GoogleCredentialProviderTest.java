@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import dev.inboxpilot.application.port.CredentialProvider;
 import dev.inboxpilot.application.port.CredentialProviderException;
 import dev.inboxpilot.infrastructure.config.BatchingProperties;
+import dev.inboxpilot.infrastructure.config.AiProperties;
 import dev.inboxpilot.infrastructure.config.CheckpointProperties;
 import dev.inboxpilot.infrastructure.config.InboxPilotProperties;
 import dev.inboxpilot.infrastructure.config.OAuthProperties;
@@ -93,6 +94,7 @@ class GoogleCredentialProviderTest {
                 new ScanningProperties(LOOKBACK, MAX_MESSAGES, false, false),
                 new BatchingProperties(BATCH_SIZE, MAX_RETRIES, BACKOFF, BACKOFF),
                 new ReportProperties(tempDir.resolve("reports"), List.of(ReportFormat.JSON), false),
-                new CheckpointProperties(false, tempDir.resolve("checkpoint.json"), CHECKPOINT_INTERVAL));
+                new CheckpointProperties(false, tempDir.resolve("checkpoint.json"), CHECKPOINT_INTERVAL),
+                new AiProperties(false, false, false));
     }
 }
