@@ -1,0 +1,59 @@
+name: CI
+
+# Build and test every change. Runs on pushes to the base branch and on every
+# pull request, so the result is visible as a required-ready status check.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A newer push to the same branch supersedes an in-flight run. In-progress runs
+# on main are left alone so the base branch keeps a complete history.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      # Verifies gradle-wrapper.jar against the checksums published by Gradle,
+      # so a tampered wrapper cannot execute arbitrary code in CI.
+      - name: Validate the Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+
+      # Caches ~/.gradle/caches and ~/.gradle/wrapper. Writes the cache only
+      # from the base branch; pull requests read it, which keeps one PR from
+      # evicting another's entries.
+      - name: Set up Gradle with dependency caching
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: Build and test
+        run: ./gradlew build --no-daemon
+
+      # Uploaded even when the build fails — that is exactly when the report is
+      # worth reading.
+      - name: Upload test report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: build/reports/tests/test
+          retention-days: 7
+          if-no-files-found: ignore
