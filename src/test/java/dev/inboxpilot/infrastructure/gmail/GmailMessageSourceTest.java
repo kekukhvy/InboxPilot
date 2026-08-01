@@ -28,6 +28,7 @@ class GmailMessageSourceTest {
     private static final String EXPECTED_QUERY = "after:" + 1785579330L;
     private static final int BATCH_SIZE = 2;
     private static final int MAX_RETRIES = 0;
+    private static final int ONE_RETRY = 1;
     private static final Duration NO_BACKOFF = Duration.ZERO;
 
     @Test
@@ -52,12 +53,43 @@ class GmailMessageSourceTest {
         StubGmailApiClient client = clientWithIds(FIRST_ID, SECOND_ID);
         client.results.add(new GmailMetadataBatch(
                 List.of(metadata(FIRST_ID)),
-                List.of(new GmailMetadataFailure(SECOND_ID, FAILURE_REASON))));
+                List.of(permanentFailure(SECOND_ID))));
 
         List<MailMessage> messages = source(client).fetchSince(SINCE);
 
         assertThat(messages).extracting(message -> message.id().value())
                 .containsExactly(FIRST_ID);
+    }
+
+    @Test
+    @DisplayName("retries only failed messages after throttling")
+    void retriesFailedMessagesAfterThrottling() {
+        StubGmailApiClient client = clientWithIds(FIRST_ID, SECOND_ID);
+        client.results.add(new GmailMetadataBatch(
+                List.of(metadata(FIRST_ID)), List.of(throttledFailure(SECOND_ID))));
+        client.results.add(successfulBatch(SECOND_ID));
+
+        List<MailMessage> messages = source(client, ONE_RETRY).fetchSince(SINCE);
+
+        assertThat(client.requestedBatches)
+                .containsExactly(List.of(FIRST_ID, SECOND_ID), List.of(SECOND_ID));
+        assertThat(messages).extracting(message -> message.id().value())
+                .containsExactly(FIRST_ID, SECOND_ID);
+    }
+
+    @Test
+    @DisplayName("reduces later batch sizes after throttling")
+    void reducesBatchSizeAfterThrottling() {
+        StubGmailApiClient client = clientWithIds(FIRST_ID, SECOND_ID, THIRD_ID);
+        client.results.add(new GmailMetadataBatch(
+                List.of(metadata(FIRST_ID)), List.of(throttledFailure(SECOND_ID))));
+        client.results.add(successfulBatch(SECOND_ID));
+        client.results.add(successfulBatch(THIRD_ID));
+
+        source(client, ONE_RETRY).fetchSince(SINCE);
+
+        assertThat(client.requestedBatches)
+                .containsExactly(List.of(FIRST_ID, SECOND_ID), List.of(SECOND_ID), List.of(THIRD_ID));
     }
 
     @Test
@@ -67,9 +99,13 @@ class GmailMessageSourceTest {
     }
 
     private static GmailMessageSource source(StubGmailApiClient client) {
+        return source(client, MAX_RETRIES);
+    }
+
+    private static GmailMessageSource source(StubGmailApiClient client, int maxRetries) {
         BatchingProperties properties = new BatchingProperties(
-                BATCH_SIZE, MAX_RETRIES, NO_BACKOFF, NO_BACKOFF);
-        return new GmailMessageSource(client, properties);
+                BATCH_SIZE, maxRetries, NO_BACKOFF, NO_BACKOFF);
+        return new GmailMessageSource(client, properties, duration -> { });
     }
 
     private static StubGmailApiClient clientWithIds(String... ids) {
@@ -86,6 +122,14 @@ class GmailMessageSourceTest {
 
     private static GmailMessageMetadata metadata(String id) {
         return new GmailMessageMetadata(id, SENDER, SUBJECT, RECEIVED_AT, List.of(LABEL));
+    }
+
+    private static GmailMetadataFailure permanentFailure(String id) {
+        return new GmailMetadataFailure(id, FAILURE_REASON, false, false);
+    }
+
+    private static GmailMetadataFailure throttledFailure(String id) {
+        return new GmailMetadataFailure(id, FAILURE_REASON, true, true);
     }
 
     private static final class StubGmailApiClient implements GmailApiClient {

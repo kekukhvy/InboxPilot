@@ -177,6 +177,10 @@ The shipped default does not include cleanup permissions — a deliberate policy
 | `initial-backoff` | First wait before retrying; doubles per attempt | `1s` |
 | `max-backoff` | Ceiling on backoff; must be ≥ `initial-backoff` | `60s` |
 
+Quota, concurrent-request, HTTP 429, and transient 5xx failures are retried with
+capped exponential backoff and jitter. After Gmail throttles a request, the
+scanner halves subsequent batch sizes for the remainder of that run.
+
 **Reports** (`inboxpilot.reports.*`)
 
 | Key | Meaning | Default |

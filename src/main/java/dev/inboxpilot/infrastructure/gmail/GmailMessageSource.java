@@ -42,11 +42,17 @@ public class GmailMessageSource implements MessageSource {
     private static final String FETCH_LOG_MESSAGE = "Gmail fetch requested for messages since {}";
     private static final String DEGRADED_LOG_MESSAGE =
             "Gmail metadata fetch degraded for message {}: {}";
+    private static final String RETRY_LOG_MESSAGE =
+            "Retrying {} Gmail metadata requests after {} (attempt {})";
+    private static final int MIN_BATCH_SIZE = 1;
+    private static final int RATE_REDUCTION_DIVISOR = 2;
     private static final Comparator<MailMessage> OLDEST_FIRST =
             Comparator.comparing(MailMessage::receivedAt);
 
     private final GmailApiClient client;
-    private final int batchSize;
+    private final GmailRetryPolicy retryPolicy;
+    private final RetrySleeper sleeper;
+    private int currentBatchSize;
 
     @Autowired
     public GmailMessageSource(GmailApiClient client, InboxPilotProperties properties) {
@@ -54,8 +60,20 @@ public class GmailMessageSource implements MessageSource {
     }
 
     GmailMessageSource(GmailApiClient client, BatchingProperties batchingProperties) {
+        this(client, batchingProperties, duration -> Thread.sleep(duration.toMillis()));
+    }
+
+    GmailMessageSource(
+            GmailApiClient client,
+            BatchingProperties batchingProperties,
+            RetrySleeper sleeper) {
         this.client = client;
-        this.batchSize = batchingProperties.batchSize();
+        this.currentBatchSize = batchingProperties.batchSize();
+        this.retryPolicy = new GmailRetryPolicy(
+                batchingProperties.maxRetries(),
+                batchingProperties.initialBackoff(),
+                batchingProperties.maxBackoff());
+        this.sleeper = sleeper;
     }
 
     @Override
@@ -86,13 +104,55 @@ public class GmailMessageSource implements MessageSource {
 
     private List<MailMessage> fetchBatches(List<String> messageIds) throws IOException {
         List<MailMessage> messages = new ArrayList<>();
-        for (int start = 0; start < messageIds.size(); start += batchSize) {
-            int end = Math.min(start + batchSize, messageIds.size());
-            GmailMetadataBatch batch = client.getMessageMetadata(messageIds.subList(start, end));
-            batch.failures().forEach(this::reportFailure);
-            batch.messages().stream().map(GmailMessageSource::toMailMessage).forEach(messages::add);
+        int start = 0;
+        while (start < messageIds.size()) {
+            int end = Math.min(start + currentBatchSize, messageIds.size());
+            fetchWithRetries(messageIds.subList(start, end), messages);
+            start = end;
         }
         return List.copyOf(messages);
+    }
+
+    private void fetchWithRetries(List<String> messageIds, List<MailMessage> messages)
+            throws IOException {
+        List<String> pending = List.copyOf(messageIds);
+        int retriesCompleted = 0;
+        while (!pending.isEmpty()) {
+            GmailMetadataBatch batch = client.getMessageMetadata(pending);
+            batch.messages().stream().map(GmailMessageSource::toMailMessage).forEach(messages::add);
+            pending = retryableIds(batch.failures(), retriesCompleted);
+            if (!pending.isEmpty()) {
+                retriesCompleted++;
+                pauseBeforeRetry(pending.size(), retriesCompleted);
+            }
+        }
+    }
+
+    private List<String> retryableIds(List<GmailMetadataFailure> failures, int retriesCompleted) {
+        if (failures.stream().anyMatch(GmailMetadataFailure::throttled)) {
+            currentBatchSize = Math.max(MIN_BATCH_SIZE, currentBatchSize / RATE_REDUCTION_DIVISOR);
+        }
+        failures.stream()
+                .filter(failure -> !failure.retryable() || !retryPolicy.canRetry(retriesCompleted))
+                .forEach(this::reportFailure);
+        if (!retryPolicy.canRetry(retriesCompleted)) {
+            return List.of();
+        }
+        return failures.stream()
+                .filter(GmailMetadataFailure::retryable)
+                .map(GmailMetadataFailure::messageId)
+                .toList();
+    }
+
+    private void pauseBeforeRetry(int messageCount, int retryNumber) throws IOException {
+        java.time.Duration delay = retryPolicy.delayBeforeRetry(retryNumber);
+        logger.warn(RETRY_LOG_MESSAGE, messageCount, delay, retryNumber);
+        try {
+            sleeper.sleep(delay);
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new IOException(exception);
+        }
     }
 
     private void reportFailure(GmailMetadataFailure failure) {

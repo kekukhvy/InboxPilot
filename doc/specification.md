@@ -96,6 +96,12 @@ retained and translated into provider-independent `MailMessage` values. A
 failure of the enclosing HTTP batch remains a mailbox read failure because no
 per-message response is then available.
 
+Retryable item failures include Gmail quota and concurrent-request errors, HTTP
+429 responses, and transient 5xx responses. Only failed message IDs are retried;
+successful items are never requested twice. Retry delays use capped exponential
+backoff with jitter. A throttling response halves the batch size, down to one,
+for the remainder of the scan so request pressure adapts automatically.
+
 The existing CLI exposes this slice through the read-only `labels list` and
 `messages list --query=<gmail-query>` commands. Results are rendered one per
 line; labels contain their stable ID and visible name, while message discovery
