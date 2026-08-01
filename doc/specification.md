@@ -298,6 +298,11 @@ into deterministic review-only candidates with message ID, category, and
 reason. It exports escaped CSV but exposes no delete/trash application port or
 action; deletion requires a separately designed future explicit command.
 
+Unsubscribe review groups extracted capabilities by exact sender, deduplicates
+and sorts `mailto` and HTTPS URIs, and presents them in a self-contained escaped
+HTML report. The report explicitly states that no capability was invoked;
+opening a URL or sending an unsubscribe email remains a manual user action.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google
