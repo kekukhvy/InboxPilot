@@ -162,6 +162,11 @@ Sender-label conflict analysis accepts explicit incompatible-label groups.
 Whenever a sender carries at least two labels from one group, the report records
 the sorted conflicting labels and that sender's representative sample subjects.
 
+Label-structure analysis compares all known labels with labels observed during
+the inventory scan. Labels absent from the scan are reported as unused or empty;
+visible names equal after trimming and case folding are grouped as duplicate
+consolidation candidates. Results are deterministic and never mutate labels.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google
