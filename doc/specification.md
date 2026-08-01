@@ -215,6 +215,11 @@ Composite rule conditions use recursive `all`, `any`, and `not` nodes. `all`
 and `any` require at least one ordered operand; `not` requires exactly one.
 Evaluation is deterministic and short-circuits operands from left to right.
 
+Rules evaluate by descending numeric priority, with ascending rule ID as the
+stable tie-breaker. Every matching rule contributes its action specifications;
+a matching `stop` rule contributes its own actions and then prevents all lower
+ordered rules from being considered. Non-matching stop rules have no effect.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google
