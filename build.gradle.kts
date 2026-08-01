@@ -1,3 +1,9 @@
+import org.gradle.api.tasks.bundling.Compression
+import org.gradle.api.tasks.bundling.Tar
+import org.gradle.api.tasks.bundling.Zip
+import org.springframework.boot.gradle.tasks.bundling.BootBuildImage
+import org.springframework.boot.gradle.tasks.bundling.BootJar
+
 plugins {
     java
     alias(libs.plugins.spring.boot)
@@ -43,4 +49,54 @@ tasks.withType<Test>().configureEach {
     testLogging {
         events("passed", "skipped", "failed")
     }
+}
+
+val bootJarTask = tasks.named<BootJar>("bootJar")
+val distributionContents: CopySpec.() -> Unit = {
+    from(bootJarTask) {
+        into("lib")
+        rename { "inboxpilot.jar" }
+    }
+    from("packaging/bin") {
+        into("bin")
+        filePermissions { unix("rwxr-xr-x") }
+    }
+    from("config/application-example.yml") {
+        into("config")
+    }
+    from("doc") {
+        into("doc")
+    }
+    from("README.md")
+}
+
+tasks.register<Zip>("distributionZip") {
+    group = "distribution"
+    description = "Builds a runnable InboxPilot ZIP distribution."
+    dependsOn(bootJarTask)
+    archiveBaseName.set(project.name)
+    archiveVersion.set(project.version.toString())
+    destinationDirectory.set(layout.buildDirectory.dir("distributions"))
+    into("${project.name}-${project.version}", distributionContents)
+}
+
+tasks.register<Tar>("distributionTar") {
+    group = "distribution"
+    description = "Builds a runnable InboxPilot compressed TAR distribution."
+    dependsOn(bootJarTask)
+    archiveBaseName.set(project.name)
+    archiveVersion.set(project.version.toString())
+    archiveExtension.set("tar.gz")
+    compression = Compression.GZIP
+    destinationDirectory.set(layout.buildDirectory.dir("distributions"))
+    into("${project.name}-${project.version}", distributionContents)
+}
+
+tasks.named("assemble") {
+    dependsOn("distributionZip", "distributionTar")
+}
+
+tasks.named<BootBuildImage>("bootBuildImage") {
+    imageName.set("ghcr.io/kekukhvy/inboxpilot:${project.version}")
+    environment.set(mapOf("BP_JVM_VERSION" to libs.versions.java.get()))
 }

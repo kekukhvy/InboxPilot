@@ -45,6 +45,9 @@ Build everything, including the executable jar:
 
 The jar is written to `build/libs/inboxpilot-0.1.0-SNAPSHOT.jar`.
 
+Runnable ZIP/TAR archives and OCI image instructions are documented in
+[Distribution packaging](doc/distribution.md).
+
 ---
 
 ## Run
