@@ -167,6 +167,11 @@ the inventory scan. Labels absent from the scan are reported as unused or empty;
 visible names equal after trimming and case folding are grouped as duplicate
 consolidation candidates. Results are deterministic and never mutate labels.
 
+Newsletter and bulk-mail detection uses metadata only. A sender is reported
+when messages expose a non-empty `List-Unsubscribe` header, bulk/list/junk
+`Precedence`, or a conventional newsletter/notification sender name. Each
+result includes the matched evidence so recommendations remain explainable.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google
