@@ -254,6 +254,12 @@ label IDs (`Label_*`); system labels such as `INBOX`, `UNREAD`, `STARRED`,
 classification execution cannot alter read, star, importance, category,
 archive, spam, or deletion state.
 
+Classification plans are idempotent because additions already present and
+removals already absent disappear when actions are reduced to the desired label
+set. After execution, repeat-run verification re-evaluates fresh metadata and
+reports every message that would still change; success requires exactly zero
+such message IDs.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google
