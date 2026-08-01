@@ -23,6 +23,11 @@ dependencies {
     implementation(libs.spring.boot.starter)
     implementation(libs.spring.boot.starter.validation)
 
+    // Desktop OAuth for Gmail (issue #9): the loopback authorization-code flow
+    // and the token cache it persists to the configured token store.
+    implementation(libs.google.oauth.client.jetty)
+    implementation(libs.google.api.client)
+
     // Generates IDE metadata for the @ConfigurationProperties types, so
     // application.yml keys get completion and inline documentation.
     annotationProcessor(libs.spring.boot.configuration.processor)

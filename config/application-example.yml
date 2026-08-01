@@ -34,11 +34,11 @@ inboxpilot:
     # Where the refresh token is cached. Keep it outside the repository.
     token-store: ${user.home}/.inboxpilot/tokens
 
-    # gmail.readonly is enough for inventory and analysis.
-    # gmail.modify is required to apply labels or archive (issues #39, #47).
+    # Least privilege: gmail.readonly is enough for inventory and analysis.
+    # Add gmail.modify only when cleanup (label/archive) is enabled — a
+    # deliberate config change, not the shipped default (issue #9).
     scopes:
       - https://www.googleapis.com/auth/gmail.readonly
-      - https://www.googleapis.com/auth/gmail.modify
 
   # ---------------------------------------------------------------------------
   # What a scan covers

@@ -11,7 +11,7 @@ interpret what they see. You do **not** document internal design rationale
 
 # First: load the project profile
 
-Read `.Codex/PROJECT.md` first. It names the **user-facing docs** file, the
+Read `.claude/PROJECT.md` first. It names the **user-facing docs** file, the
 **user config file** (if any), and the project's purpose. Use those paths — do
 not assume a filename.
 
@@ -69,7 +69,7 @@ not assume a filename.
 
 # Post your result to the issue
 
-Follow `.Codex/agents/ISSUE-POSTING.md` (shared format, ≤15 lines, no confirm).
+Follow `.claude/agents/ISSUE-POSTING.md` (shared format, ≤15 lines, no confirm).
 Post a `### 🤖 user-docs-writer` comment: which sections you updated (options /
 config / API / output / limitations) and what changed, plus anything whose
 behavior was unclear. If no user-facing surface changed, say "no changes needed

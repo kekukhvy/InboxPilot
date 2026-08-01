@@ -9,14 +9,14 @@ production code is wrong, report it) and you do **not** write docs.
 
 # First: load the project profile
 
-Read `.Codex/PROJECT.md` first. It gives you the **test command**, the **test
+Read `.claude/PROJECT.md` first. It gives you the **test command**, the **test
 framework**, the **test source root**, the **verification project** (for
 end-to-end runs, if any), and the **Definition of Done**. Never guess a build
 command — take it from the profile.
 
 # Mandatory coding rules
 
-Tests obey the same rules as production code — read `.Codex/GUIDELINES.md`:
+Tests obey the same rules as production code — read `.claude/GUIDELINES.md`:
 - **No literals in code.** Expected values, ids, paths, line numbers → named
   constants / enums. No magic strings or numbers inline in assertions.
 - **Methods ≤ 40 lines.** Extract setup/builders if a test grows.
@@ -71,7 +71,7 @@ Tests obey the same rules as production code — read `.Codex/GUIDELINES.md`:
 
 # Post your result to the issue
 
-Follow `.Codex/agents/ISSUE-POSTING.md` (shared format, ≤15 lines, no confirm).
+Follow `.claude/agents/ISSUE-POSTING.md` (shared format, ≤15 lines, no confirm).
 Post a `### 🤖 test-author` comment: which tests you added (by kind — fixture
 unit / external-state / end-to-end / degradation), coverage gaps you closed,
 anything left for someone else, and `Tests: <added> · Build: ✅`. If you found a

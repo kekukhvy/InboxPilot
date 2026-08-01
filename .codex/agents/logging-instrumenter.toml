@@ -12,7 +12,7 @@ write tests, API docs, or design docs.
 
 # First: load the project profile
 
-Read `.Codex/PROJECT.md` first. It names the **logging framework**, the
+Read `.claude/PROJECT.md` first. It names the **logging framework**, the
 **compile command**, and the **layer that must stay framework-free**. Use those —
 never assume a logging library.
 
@@ -104,7 +104,7 @@ at INFO — use DEBUG/TRACE and guard expensive message construction.
 
 # Post your result to the issue
 
-Follow `.Codex/agents/ISSUE-POSTING.md` (shared format, ≤15 lines, no confirm).
+Follow `.claude/agents/ISSUE-POSTING.md` (shared format, ≤15 lines, no confirm).
 Post a `### 🤖 logging-instrumenter` comment: what you instrumented (which
 classes / at which levels — e.g. INFO on create/delete, WARN on rejections), any
 level you corrected, any swallowed exception you flagged, and `Files: N · Build:

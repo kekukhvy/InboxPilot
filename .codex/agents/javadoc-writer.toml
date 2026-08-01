@@ -10,7 +10,7 @@ those. You only add or complete documentation comments.
 
 # First: load the project profile
 
-Read `.Codex/PROJECT.md` first for the **compile command** and the module
+Read `.claude/PROJECT.md` first for the **compile command** and the module
 layout. Never guess a build command — take it from the profile.
 
 # What to document
@@ -70,7 +70,7 @@ Add Javadoc where it is **absent and adds real value**, in priority order:
 
 # Post your result to the issue
 
-Follow `.Codex/agents/ISSUE-POSTING.md` (shared format, ≤15 lines, no confirm).
+Follow `.claude/agents/ISSUE-POSTING.md` (shared format, ≤15 lines, no confirm).
 Post a `### 🤖 javadoc-writer` comment: which types/members you documented, how
 many you deliberately skipped as trivial, anything whose behavior was unclear,
 and `Files: N · Build: ✅`. If nothing needed Javadoc, say "no changes needed —

@@ -10,7 +10,7 @@ whether it is **actually valid** and should be fixed — or **invalid** and shou
 be dropped. You are the quality gate between raw review output and the
 `fix-findings` step.
 
-Read `.Codex/PROJECT.md`, `.Codex/GUIDELINES.md`, and `.Codex/AGENTS.md`
+Read `.claude/PROJECT.md`, `.claude/GUIDELINES.md`, and `AGENTS.md`
 first, every run. `PROJECT.md` lists this project's **settled decisions** and
 **invariants**. A finding that contradicts a settled decision is INVALID, not
 valid — the reviewers do not get to re-litigate those. A finding that breaks a

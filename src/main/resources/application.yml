@@ -36,9 +36,11 @@ inboxpilot:
     client-id: ${INBOXPILOT_OAUTH_CLIENT_ID:}
     client-secret: ${INBOXPILOT_OAUTH_CLIENT_SECRET:}
     token-store: ${INBOXPILOT_TOKEN_STORE:${user.home}/.inboxpilot/tokens}
+    # Least privilege for the v0.2 inventory slice: read-only. gmail.modify is
+    # only needed once cleanup (label/archive) ships — add it deliberately in
+    # config then, not by default here (issue #9).
     scopes:
       - https://www.googleapis.com/auth/gmail.readonly
-      - https://www.googleapis.com/auth/gmail.modify
 
   scanning:
     lookback: 365d
