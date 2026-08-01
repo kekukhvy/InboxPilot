@@ -151,6 +151,13 @@ success and per-item throttling failures, retrying only failed message IDs, and
 filesystem checkpoint continuation. They require neither network access nor a
 real mailbox.
 
+## Mailbox analysis
+
+Unclassified inventory analysis accepts the set of user-created label IDs,
+excludes sender and domain entries carrying any of them, and ranks the remaining
+entries by descending message volume, then unread count, then stable key. Gmail
+system labels do not make an entry user-classified.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google
