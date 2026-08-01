@@ -88,6 +88,9 @@ Invalid or contradictory values stop startup and identify the failing key.
 Defaults are in `src/main/resources/application.yml`; the example file explains
 every setting and its safe default.
 
+For threat boundaries, credential handling, artifact retention, and optional AI
+data sharing, read [Security and privacy](security-and-privacy.md).
+
 ## Inventory and reports
 
 Mailbox discovery reads message IDs in pages and metadata in batches. Bodies and
