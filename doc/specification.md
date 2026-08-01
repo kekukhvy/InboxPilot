@@ -100,6 +100,10 @@ retained and translated into provider-independent `MailMessage` values. A
 failure of the enclosing HTTP batch remains a mailbox read failure because no
 per-message response is then available.
 
+Provider metadata that cannot form a valid domain message, including a malformed
+`From` sender, is reported by message ID and omitted without logging the raw
+header. Other valid items from the batch and the overall inventory continue.
+
 Retryable item failures include Gmail quota and concurrent-request errors, HTTP
 429 responses, and transient 5xx responses. Only failed message IDs are retried;
 successful items are never requested twice. Retry delays use capped exponential
