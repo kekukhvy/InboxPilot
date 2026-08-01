@@ -282,6 +282,11 @@ messages already classified as newsletters and strictly older than that
 threshold, then groups candidates by exact sender. Message IDs within a group
 are ordered oldest-first and each group reports its observed time range.
 
+Transient-message detection classifies subject metadata into OTP, login alert,
+delivery status, and transient notification candidates using explicit local
+patterns. Every candidate records the matched category as its reason; messages
+with no supported signal remain outside the cleanup report.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google
