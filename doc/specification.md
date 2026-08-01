@@ -182,6 +182,11 @@ cutoff. It classifies old newsletters, obsolete alerts, OTP messages, and
 promotional traffic into an immutable review report. The report has no mutation
 or deletion operation; mailbox changes remain a separate explicit execute step.
 
+Label taxonomy planning emits evidence-backed `CREATE`, `MERGE`, and `RENAME`
+proposals. New labels require an explicit mailbox-volume threshold, duplicate
+labels become merge candidates, and non-canonical visible names become rename
+candidates. Planning is read-only and produces no provider operations.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google
