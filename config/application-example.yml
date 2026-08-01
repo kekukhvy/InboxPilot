@@ -1,0 +1,100 @@
+# InboxPilot — example configuration
+#
+# Copy this file, fill in the placeholders, and point the application at it:
+#
+#   cp config/application-example.yml config/application-local.yml
+#   java -jar build/libs/inboxpilot-0.1.0-SNAPSHOT.jar \
+#        --spring.config.additional-location=file:./config/application-local.yml
+#
+# `config/application-local.yml` is git-ignored. NEVER put a real client secret
+# in a file you commit — prefer the environment variables shown below.
+#
+# Every value here is validated at startup. A missing or out-of-range setting
+# stops the application with a message naming the offending key.
+
+inboxpilot:
+
+  # ---------------------------------------------------------------------------
+  # Google OAuth (desktop flow) — issue #9
+  # ---------------------------------------------------------------------------
+  oauth:
+    # Leave false until Gmail credentials exist. Credentials are validated only
+    # when this is true, so the application still runs before OAuth is set up.
+    enabled: true
+
+    # From Google Cloud Console → APIs & Services → Credentials → OAuth client
+    # ID (application type: Desktop app).
+    #
+    # Preferred: leave these as-is and export the environment variables
+    #   export INBOXPILOT_OAUTH_CLIENT_ID=...
+    #   export INBOXPILOT_OAUTH_CLIENT_SECRET=...
+    client-id: ${INBOXPILOT_OAUTH_CLIENT_ID:REPLACE_WITH_YOUR_CLIENT_ID}
+    client-secret: ${INBOXPILOT_OAUTH_CLIENT_SECRET:REPLACE_WITH_YOUR_CLIENT_SECRET}
+
+    # Where the refresh token is cached. Keep it outside the repository.
+    token-store: ${user.home}/.inboxpilot/tokens
+
+    # gmail.readonly is enough for inventory and analysis.
+    # gmail.modify is required to apply labels or archive (issues #39, #47).
+    scopes:
+      - https://www.googleapis.com/auth/gmail.readonly
+      - https://www.googleapis.com/auth/gmail.modify
+
+  # ---------------------------------------------------------------------------
+  # What a scan covers
+  # ---------------------------------------------------------------------------
+  scanning:
+    # ISO-8601 duration or Spring's shorthand: 365d, 12h, 30m.
+    lookback: 365d
+
+    # Hard ceiling for one run; 1 .. 1000000. Guards against a runaway scan
+    # exhausting the daily API quota.
+    max-messages: 50000
+
+    include-spam: false
+    include-trash: false
+
+  # ---------------------------------------------------------------------------
+  # Request batching and retry
+  # ---------------------------------------------------------------------------
+  batching:
+    # 1 .. 100 — Gmail rejects larger batches.
+    batch-size: 100
+
+    # 0 .. 10. Zero means fail fast, without retrying.
+    max-retries: 5
+
+    # Exponential backoff: doubles per attempt, capped at max-backoff.
+    # initial-backoff must not exceed max-backoff.
+    initial-backoff: 1s
+    max-backoff: 60s
+
+  # ---------------------------------------------------------------------------
+  # Generated reports
+  # ---------------------------------------------------------------------------
+  reports:
+    output-directory: ./reports
+
+    # One or more of: JSON, CSV, HTML.
+    formats:
+      - JSON
+      - HTML
+
+    # Whether an existing report file may be replaced.
+    overwrite: false
+
+  # ---------------------------------------------------------------------------
+  # Resumable progress
+  # ---------------------------------------------------------------------------
+  checkpoints:
+    # A long scan that dies partway resumes instead of restarting.
+    enabled: true
+    file: ./.inboxpilot/checkpoint.json
+
+    # Messages processed between checkpoint writes; at least 1.
+    interval: 500
+
+# Optional: raise log detail for InboxPilot's own code.
+logging:
+  level:
+    dev.inboxpilot: INFO

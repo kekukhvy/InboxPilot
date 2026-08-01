@@ -67,26 +67,111 @@ context starts, does its work, and exits.
 
 ## Configuration
 
-Settings live in `src/main/resources/application.yml`. Override any of them
-without editing the file — Spring Boot reads, in increasing precedence: the
-bundled `application.yml`, an `application.yml` next to the jar, environment
-variables, then command-line arguments.
+Defaults live in `src/main/resources/application.yml`, and
+[`config/application-example.yml`](config/application-example.yml) is a fully
+commented template. Override without editing either — Spring Boot reads, in
+increasing precedence: the bundled `application.yml`, a config file you point it
+at, environment variables, then command-line arguments.
+
+**Every setting is validated at startup.** A missing, malformed, or out-of-range
+value stops the application with a message naming the offending key, rather than
+failing later against a real mailbox.
+
+### Getting started
+
+```bash
+cp config/application-example.yml config/application-local.yml
+# edit config/application-local.yml, then:
+java -jar build/libs/inboxpilot-0.1.0-SNAPSHOT.jar \
+     --spring.config.additional-location=file:./config/application-local.yml
+```
+
+`config/application-local.yml` is git-ignored. See **Secrets** below.
+
+### Settings
+
+All keys are under the `inboxpilot.` prefix.
+
+**OAuth** (`inboxpilot.oauth.*`) — Google credentials; see issue #9
 
 | Key | Meaning | Default |
 |---|---|---|
-| `spring.application.name` | Application name shown in logs | `inboxpilot` |
-| `spring.main.web-application-type` | Runtime style; `none` = no web server | `none` |
+| `enabled` | Whether Gmail access is configured. Credentials are validated only when `true`, so the app runs before OAuth is set up. | `false` |
+| `client-id` | OAuth client id from Google Cloud | from `INBOXPILOT_OAUTH_CLIENT_ID` |
+| `client-secret` | OAuth client secret — **never commit** | from `INBOXPILOT_OAUTH_CLIENT_SECRET` |
+| `token-store` | Directory caching the refresh token | `~/.inboxpilot/tokens` |
+| `scopes` | Gmail scopes requested; at least one | readonly + modify |
+
+**Scanning** (`inboxpilot.scanning.*`) — what a scan covers
+
+| Key | Meaning | Default |
+|---|---|---|
+| `lookback` | How far back to scan (`365d`, `12h`, …) | `365d` |
+| `max-messages` | Ceiling for one run; `1`–`1000000` | `50000` |
+| `include-spam` | Include the spam folder | `false` |
+| `include-trash` | Include the trash folder | `false` |
+
+**Batching** (`inboxpilot.batching.*`) — request batching and retry
+
+| Key | Meaning | Default |
+|---|---|---|
+| `batch-size` | Messages per batch call; `1`–`100` (Gmail's limit) | `100` |
+| `max-retries` | Retries after a retryable failure; `0`–`10` | `5` |
+| `initial-backoff` | First wait before retrying; doubles per attempt | `1s` |
+| `max-backoff` | Ceiling on backoff; must be ≥ `initial-backoff` | `60s` |
+
+**Reports** (`inboxpilot.reports.*`)
+
+| Key | Meaning | Default |
+|---|---|---|
+| `output-directory` | Where reports are written | `./reports` |
+| `formats` | One or more of `JSON`, `CSV`, `HTML` | `JSON`, `HTML` |
+| `overwrite` | Whether an existing report may be replaced | `false` |
+
+**Checkpoints** (`inboxpilot.checkpoints.*`) — resumable progress
+
+| Key | Meaning | Default |
+|---|---|---|
+| `enabled` | Checkpoint progress so a failed run resumes | `true` |
+| `file` | File holding checkpoint state | `./.inboxpilot/checkpoint.json` |
+| `interval` | Messages between checkpoint writes; ≥ `1` | `500` |
+
+**Logging**
+
+| Key | Meaning | Default |
+|---|---|---|
 | `logging.level.root` | Log level for everything | `INFO` |
 | `logging.level.dev.inboxpilot` | Log level for InboxPilot's own code | `INFO` |
 
-Examples — turn on debug logging for one run:
+### Secrets
+
+OAuth credentials must never reach the repository. Supply them through the
+environment:
+
+```bash
+export INBOXPILOT_OAUTH_CLIENT_ID='...'
+export INBOXPILOT_OAUTH_CLIENT_SECRET='...'
+export INBOXPILOT_OAUTH_ENABLED=true
+```
+
+`.gitignore` blocks `config/*.yml` (except the example), `credentials.json`,
+`client_secret*.json`, `tokens/`, `.inboxpilot/`, and `.env*`. If you add a new
+kind of secret file, add it there too.
+
+### Examples
+
+Turn on debug logging for one run:
 
 ```bash
 ./gradlew bootRun --args="--logging.level.dev.inboxpilot=DEBUG"
 ```
 
+Scan only the last 30 days, in smaller batches:
+
 ```bash
-java -jar build/libs/inboxpilot-0.1.0-SNAPSHOT.jar --logging.level.dev.inboxpilot=DEBUG
+java -jar build/libs/inboxpilot-0.1.0-SNAPSHOT.jar \
+     --inboxpilot.scanning.lookback=30d \
+     --inboxpilot.batching.batch-size=25
 ```
 
 ---
