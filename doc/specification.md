@@ -211,6 +211,10 @@ condition explicitly controls case sensitivity with `ignore-case`; regular
 expressions are compiled once and invalid expressions fail validation before
 evaluation.
 
+Composite rule conditions use recursive `all`, `any`, and `not` nodes. `all`
+and `any` require at least one ordered operand; `not` requires exactly one.
+Evaluation is deterministic and short-circuits operands from left to right.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google
