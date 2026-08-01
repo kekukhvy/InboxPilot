@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 import dev.inboxpilot.application.model.MailboxLabel;
+import dev.inboxpilot.application.inventory.InventoryService;
 import dev.inboxpilot.application.port.MailboxGateway;
 import dev.inboxpilot.application.port.MessageSource;
 import dev.inboxpilot.application.model.ScanCheckpoint;
@@ -13,6 +14,9 @@ import dev.inboxpilot.domain.message.MailMessage;
 import dev.inboxpilot.domain.message.MessageId;
 import java.lang.reflect.Constructor;
 import java.time.Instant;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
@@ -37,6 +41,7 @@ class InboxPilotCommandTest {
     private static final String QUERY_ARGUMENT = "--query=" + QUERY;
     private static final String UNKNOWN_ARGUMENT = "unknown";
     private static final String CHECKPOINT_ARGUMENT = "checkpoint";
+    private static final String INVENTORY_ARGUMENT = "inventory";
     private static final String RESET_ARGUMENT = "reset";
     private static final String RESET_CONFIRMATION = "Checkpoint reset";
     private static final String USAGE_FRAGMENT = "labels list";
@@ -62,7 +67,11 @@ class InboxPilotCommandTest {
 
         assertThat(constructors).hasSize(1);
         assertThat(constructors[0].getParameterTypes())
-                .containsExactly(MessageSource.class, MailboxGateway.class, CheckpointStore.class);
+                .containsExactly(
+                        MessageSource.class,
+                        MailboxGateway.class,
+                        CheckpointStore.class,
+                        InventoryService.class);
     }
 
     @Test
@@ -76,7 +85,8 @@ class InboxPilotCommandTest {
                 List.of());
         MessageSource inMemorySource = since -> List.of(message);
 
-        InboxPilotCommand command = new InboxPilotCommand(inMemorySource, stubGateway, checkpointStore);
+        InboxPilotCommand command = new InboxPilotCommand(
+                inMemorySource, stubGateway, checkpointStore, inventoryService(inMemorySource));
         command.reportConfiguredSource();
 
         assertThat(command.messageSource().fetchSince(Instant.EPOCH))
@@ -121,8 +131,25 @@ class InboxPilotCommandTest {
         assertThat(checkpointStore.wasReset).isTrue();
     }
 
+    @Test
+    @DisplayName("runs inventory and renders generated report paths")
+    void runsInventory() {
+        assertThat(command().execute(INVENTORY_ARGUMENT))
+                .containsExactly("Inventory complete: 0 messages", "Report: /tmp/inventory.json");
+    }
+
     private InboxPilotCommand command() {
-        return new InboxPilotCommand(stubSource, stubGateway, checkpointStore);
+        return new InboxPilotCommand(
+                stubSource, stubGateway, checkpointStore, inventoryService(stubSource));
+    }
+
+    private static InventoryService inventoryService(MessageSource source) {
+        return new InventoryService(
+                source,
+                inventory -> List.of(java.nio.file.Path.of("/tmp/inventory.json")),
+                Duration.ofDays(1),
+                10,
+                Clock.fixed(Instant.parse("2026-08-01T12:00:00Z"), ZoneOffset.UTC));
     }
 
     private static final class StubCheckpointStore implements CheckpointStore {

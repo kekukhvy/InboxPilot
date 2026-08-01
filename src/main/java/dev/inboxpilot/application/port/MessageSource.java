@@ -21,4 +21,14 @@ public interface MessageSource {
      * @throws MessageSourceException if the mailbox cannot be read
      */
     List<MailMessage> fetchSince(Instant since);
+
+    /**
+     * Fetches at most the requested number of messages.
+     *
+     * <p>Adapters should override this method to stop provider pagination early;
+     * the default keeps existing interchangeable implementations safe.
+     */
+    default List<MailMessage> fetchSince(Instant since, int maximumMessages) {
+        return fetchSince(since).stream().limit(maximumMessages).toList();
+    }
 }
