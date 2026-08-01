@@ -199,6 +199,12 @@ description/source/tag metadata. IDs use lowercase letters, digits, hyphens,
 and underscores. Persisted collections are ordered and immutable after loading;
 `doc/rules.example.yaml` is the canonical example.
 
+Rule YAML is loaded through SnakeYAML's safe constructor with duplicate keys
+disabled and bounded document size and aliases. Validation failures name the
+exact field path (for example, `rules[0].match`) and malformed YAML is
+translated into the same actionable error type. No partially valid rule set is
+returned.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google
