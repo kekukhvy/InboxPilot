@@ -13,6 +13,7 @@ import java.time.Clock;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -62,6 +63,24 @@ class GmailMessageSourceTest {
         assertThat(client.requestedBatches).containsExactly(List.of(FIRST_ID, SECOND_ID));
         assertThat(messages).extracting(message -> message.id().value())
                 .containsExactly(FIRST_ID, SECOND_ID);
+    }
+
+    @Test
+    @DisplayName("skips restored message ids and publishes each completed batch")
+    void resumesFromCompletedMessageIds() {
+        StubGmailApiClient client = clientWithIds(FIRST_ID, SECOND_ID, THIRD_ID);
+        client.results.add(successfulBatch(SECOND_ID, THIRD_ID));
+        List<List<MailMessage>> completedBatches = new ArrayList<>();
+
+        List<MailMessage> messages = source(client).fetchSince(
+                SINCE, ALL_MESSAGES, Set.of(new dev.inboxpilot.domain.message.MessageId(FIRST_ID)),
+                completedBatches::add);
+
+        assertThat(client.requestedBatches).containsExactly(List.of(SECOND_ID, THIRD_ID));
+        assertThat(completedBatches).singleElement().satisfies(batch ->
+                assertThat(batch).extracting(message -> message.id().value())
+                        .containsExactly(SECOND_ID, THIRD_ID));
+        assertThat(messages).hasSize(BATCH_SIZE);
     }
 
     @Test

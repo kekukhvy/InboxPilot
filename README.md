@@ -107,8 +107,13 @@ Discard saved scan progress explicitly with:
 ./gradlew bootRun --args='checkpoint reset'
 ```
 
-Checkpoint writes atomically replace the configured file. A scan resumes only
-when its configuration and query fingerprint matches the saved checkpoint.
+After every completed Gmail metadata batch, InboxPilot atomically replaces the
+configured checkpoint file with all successfully decoded messages gathered so
+far. A restarted scan restores those messages, keeps the original time boundary,
+and skips their Gmail IDs. Final CSV/JSON reports are built from restored plus
+new batches. The checkpoint is removed only after every report is written; a
+fetch or report failure leaves it available for the next run. Resume occurs only
+when the scan configuration fingerprint matches the saved checkpoint.
 
 Inventory reports are written as deterministic `inventory.csv` and
 `inventory.json` files in `inboxpilot.reports.output-directory`. Existing files
@@ -234,7 +239,7 @@ scanner halves subsequent batch sizes for the remainder of that run.
 |---|---|---|
 | `enabled` | Checkpoint progress so a failed run resumes | `true` |
 | `file` | File holding checkpoint state | `./.inboxpilot/checkpoint.json` |
-| `interval` | Messages between checkpoint writes; ≥ `1` | `500` |
+| `interval` | Reserved compatibility setting; checkpoints currently persist every completed metadata batch | `500` |
 
 **Logging**
 

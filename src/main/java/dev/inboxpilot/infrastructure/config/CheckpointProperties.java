@@ -8,11 +8,12 @@ import java.nio.file.Path;
  * Resumable-progress storage.
  *
  * <p>A long scan that dies partway should resume rather than restart, so
- * progress is checkpointed every {@code interval} messages.
+ * progress is checkpointed after every completed provider batch. The interval
+ * remains in the configuration contract for compatibility with existing files.
  *
  * @param enabled  whether progress is checkpointed at all
  * @param file     file holding the checkpoint state
- * @param interval messages processed between checkpoint writes
+ * @param interval reserved compatibility value
  */
 public record CheckpointProperties(
         boolean enabled,

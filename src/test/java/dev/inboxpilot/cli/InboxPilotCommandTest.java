@@ -147,6 +147,8 @@ class InboxPilotCommandTest {
         return new InventoryService(
                 source,
                 inventory -> List.of(java.nio.file.Path.of("/tmp/inventory.json")),
+                new StubCheckpointStore(),
+                false,
                 Duration.ofDays(1),
                 10,
                 Clock.fixed(Instant.parse("2026-08-01T12:00:00Z"), ZoneOffset.UTC));
