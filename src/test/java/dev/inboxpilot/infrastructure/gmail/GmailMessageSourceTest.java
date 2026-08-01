@@ -3,11 +3,14 @@ package dev.inboxpilot.infrastructure.gmail;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.inboxpilot.application.port.MessageSource;
+import dev.inboxpilot.application.model.InventoryProgress;
 import dev.inboxpilot.domain.message.MailMessage;
 import dev.inboxpilot.infrastructure.config.BatchingProperties;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.Clock;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -30,6 +33,7 @@ class GmailMessageSourceTest {
     private static final int MAX_RETRIES = 0;
     private static final int ONE_RETRY = 1;
     private static final Duration NO_BACKOFF = Duration.ZERO;
+    private static final int ALL_MESSAGES = 3;
 
     @Test
     @DisplayName("retrieves metadata in configured batches")
@@ -90,6 +94,25 @@ class GmailMessageSourceTest {
 
         assertThat(client.requestedBatches)
                 .containsExactly(List.of(FIRST_ID, SECOND_ID), List.of(SECOND_ID), List.of(THIRD_ID));
+    }
+
+    @Test
+    @DisplayName("reports completed and remaining message counts")
+    void reportsInventoryProgress() {
+        StubGmailApiClient client = clientWithIds(FIRST_ID, SECOND_ID, THIRD_ID);
+        client.results.add(successfulBatch(FIRST_ID, SECOND_ID));
+        client.results.add(successfulBatch(THIRD_ID));
+        List<InventoryProgress> reports = new ArrayList<>();
+        BatchingProperties properties = new BatchingProperties(
+                BATCH_SIZE, MAX_RETRIES, NO_BACKOFF, NO_BACKOFF);
+        GmailMessageSource source = new GmailMessageSource(
+                client, properties, duration -> { }, reports::add,
+                Clock.fixed(SINCE, ZoneOffset.UTC));
+
+        source.fetchSince(SINCE);
+
+        assertThat(reports.getLast().processedMessages()).isEqualTo(ALL_MESSAGES);
+        assertThat(reports.getLast().remainingMessages()).isZero();
     }
 
     @Test
