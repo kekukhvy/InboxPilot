@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
  * Pins the behaviour of the not-yet-implemented Gmail adapter.
  *
  * <p>The point of these tests is the failure mode, not the feature: until the
- * Gmail calls land (issues #9 and #10) the adapter must refuse loudly. Returning
+ * metadata retrieval lands (issue #11) the adapter must refuse loudly. Returning
  * an empty list would read as "the mailbox has no messages" and quietly corrupt
  * every inventory and analysis built on top of it — the opposite of the
  * "report what was degraded" invariant.
@@ -34,12 +34,11 @@ class GmailMessageSourceTest {
     }
 
     @Test
-    @DisplayName("names the issues that will implement it, so the failure is actionable")
-    void pointsAtTheImplementingIssues() {
+    @DisplayName("names the metadata issue that will implement it, so the failure is actionable")
+    void pointsAtTheMetadataIssue() {
         assertThatExceptionOfType(MessageSourceException.class)
                 .isThrownBy(() -> messageSource.fetchSince(SINCE))
-                .withMessageContaining("#9")
-                .withMessageContaining("#10");
+                .withMessageContaining("#11");
     }
 
     @Test

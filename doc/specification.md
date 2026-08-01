@@ -69,6 +69,30 @@ contains only `gmail.readonly`. Broader scopes such as `gmail.modify` require an
 explicit configuration change. The detailed rationale is recorded in
 [ADR 0002](adr/0002-desktop-oauth-authorization.md).
 
+## Gmail mailbox gateway
+
+The application-owned `MailboxGateway` port exposes provider-independent label
+and message-id values. Its Gmail adapter lists all labels and accepts a Gmail
+search expression for message discovery. Message listing follows every
+`nextPageToken` until the complete result has been collected; a repeated token
+is reported as a failure instead of allowing an unbounded loop.
+
+The generated Google client and its response types remain inside
+`infrastructure.gmail`. The adapter requests an access token lazily through the
+`CredentialProvider`, caches the authorized Gmail client until that token
+expires, and sends no mailbox mutation request. Missing message collections are
+treated as empty pages. Provider I/O failures are translated to
+`MailboxGatewayException` with the original cause retained.
+
+Fetching message headers, label IDs attached to messages, and other metadata is
+deliberately deferred to issue #11; this gateway discovers identifiers only.
+
+The existing CLI exposes this slice through the read-only `labels list` and
+`messages list --query=<gmail-query>` commands. Results are rendered one per
+line; labels contain their stable ID and visible name, while message discovery
+prints IDs only. Starting the application without a command performs no Gmail
+request, preserving the unconfigured development startup path.
+
 ## Persisted contracts
 
 OAuth refresh-token persistence is owned by Google's file data-store
@@ -84,7 +108,7 @@ versions deliberately.
   tests.
 - No real-mailbox verification target is configured, so live authorization is
   reported as not run because of the environment, never as passing.
-- Wiring authorized credentials into the Gmail message gateway belongs to issue
-  #10 and is outside the OAuth slice.
+- Live gateway verification requires a configured Gmail account and is not run
+  because no verification mailbox is configured.
 - Splitting package layers into separate Gradle modules remains deliberately
   deferred while ArchUnit provides the required boundary enforcement.

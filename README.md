@@ -6,9 +6,10 @@ InboxPilot inventories a Gmail mailbox, proposes a label taxonomy from what it
 finds, and applies declarative YAML rules to classify and clean up mail — with a
 dry run first, so nothing changes in your mailbox until you say so.
 
-> **Status:** foundation with desktop Gmail OAuth authorization. The Gmail
-> message gateway, inventory pipeline, rule engine, and classification land in
-> later slices — see the [open issues](https://github.com/kekukhvy/InboxPilot/issues).
+> **Status:** foundation with desktop Gmail OAuth authorization plus label and
+> paginated message-ID discovery. Batched metadata retrieval, the inventory
+> pipeline, rule engine, and classification land in later slices — see the
+> [open issues](https://github.com/kekukhvy/InboxPilot/issues).
 
 ---
 
@@ -62,6 +63,25 @@ java -jar build/libs/inboxpilot-0.1.0-SNAPSHOT.jar
 
 InboxPilot runs as a short-lived process rather than a server: the application
 context starts, does its work, and exits.
+
+### Read-only Gmail commands
+
+After enabling OAuth, list the real labels in the authorized mailbox:
+
+```bash
+./gradlew bootRun --args='labels list'
+```
+
+Each output line contains the Gmail label ID and name separated by a tab. List
+all message IDs matching a Gmail search query with:
+
+```bash
+./gradlew bootRun --args='messages list --query=after:2026/07/01'
+```
+
+Quote the complete `--args` value when the query contains spaces or Gmail
+operators. Both commands are read-only: they neither apply labels nor otherwise
+change mailbox state.
 
 ---
 
