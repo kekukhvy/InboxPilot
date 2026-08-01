@@ -310,6 +310,12 @@ local parts, bodies, attachments, and raw headers have no field in the model.
 Local redaction replaces email addresses, HTTP(S) URLs, and long numeric codes
 before an AI provider port can receive the payload.
 
+AI classification is an application-owned `AiClassifier` port accepting only
+the privacy-filtered input model and returning a provider-neutral suggestion
+with label, finite 0..1 confidence, and review rationale. Provider SDKs and
+transport types belong exclusively to infrastructure adapters; domain and use
+case code can swap remote or local implementations without modification.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google
