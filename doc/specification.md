@@ -172,6 +172,11 @@ when messages expose a non-empty `List-Unsubscribe` header, bulk/list/junk
 `Precedence`, or a conventional newsletter/notification sender name. Each
 result includes the matched evidence so recommendations remain explainable.
 
+`List-Unsubscribe` capability extraction accepts only angle-bracketed `mailto`
+and HTTPS URIs. Malformed, insecure, and unsupported mechanisms are ignored.
+Parsing is inert: extraction never opens a URL, sends mail, or changes mailbox
+state.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google
