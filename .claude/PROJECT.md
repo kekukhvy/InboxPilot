@@ -84,19 +84,31 @@ Decisions that are **deliberate and not to be re-litigated** by any agent. The
 `spec-keeper` and `architecture-reviewer` treat contradicting code as a finding
 to *flag*, not as license to rewrite the rationale.
 
-1. _(fill in — e.g. "Dry-run is the default; nothing mutates the mailbox without
-   an explicit execute flag")_
-2. _(…)_
-
-If this project has no settled decisions yet, write `none yet` — agents will
-skip the check.
+1. **Hexagonal architecture; dependencies point inward.** `domain` depends on
+   nothing, `application` declares ports, `infrastructure` implements them.
+   Enforced by `ArchitectureTest`. See
+   [ADR 0001](../doc/adr/0001-hexagonal-architecture.md).
+2. **`domain` is framework-free.** No Spring, Jackson, SLF4J, or provider types
+   in `domain` — it must be testable with plain JUnit, without a mailbox.
+3. **Gmail types stay in `infrastructure`.** Everything outside the Gmail adapter
+   speaks in domain terms. Google client types never cross the boundary.
+4. **Package boundaries, not Gradle modules.** Splitting the layers into separate
+   build modules is deliberately deferred — packages plus ArchUnit give the same
+   protection at a fraction of the build complexity (ADR 0001).
 
 ## Invariants
 
 Hard rules a change must never break. Agents check these during review.
 
-- _(e.g. "Never mutate the mailbox outside an explicit execute step")_
-- _(e.g. "Every destructive action is reversible via an exported rollback plan")_
+- **Never mutate the mailbox outside an explicit execute step.** Dry-run is the
+  default; a run that was not asked to execute changes nothing.
+- **Degrade, don't fail.** One malformed message, an unresolvable sender, or a
+  single API rejection must not abort a whole scan — warn, record, and carry on
+  with a usable result.
+- **Report what was degraded.** A silent partial result is worse than a loud one;
+  the user must know when an inventory or analysis is incomplete.
+- **Secrets never reach the repository.** OAuth client secrets and tokens stay
+  out of Git and out of logs.
 
 ## Definition of Done
 
@@ -143,6 +155,13 @@ lists below are the fallback and the intent.
 
 | Changed path | Area label |
 |---|---|
-| _(fill in once modules exist, e.g. `**/gmail/**` → `area: gmail`)_ | |
+| `build.gradle.kts`, `settings.gradle.kts`, `gradle/**`, `.github/**`, `doc/adr/**` | `area: foundation` |
+| `**/infrastructure/gmail/**` | `area: gmail` |
+| `**/domain/message/**`, `**/inventory/**` | `area: inventory` |
+| `**/analysis/**` | `area: analysis` |
+| `**/rules/**` | `area: rules` |
+| `**/classification/**` | `area: classification` |
+| `**/cleanup/**` | `area: cleanup` |
+| `**/ai/**` | `area: ai` |
 
 **Milestones:** `v0.1 Foundation`, and the roadmap milestones in the repo.

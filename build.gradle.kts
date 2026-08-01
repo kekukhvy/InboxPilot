@@ -24,6 +24,7 @@ dependencies {
 
     testImplementation(libs.spring.boot.starter.test)
     testImplementation(libs.assertj.core)
+    testImplementation(libs.archunit.junit5)
 }
 
 tasks.withType<Test>().configureEach {
