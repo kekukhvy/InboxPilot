@@ -106,6 +106,8 @@ the scan has enough elapsed progress to calculate it.
 ## Configuration
 
 For the complete operational workflow, see the [InboxPilot user guide](doc/user-guide.md).
+Security boundaries and operator guidance are documented in
+[Security and privacy](doc/security-and-privacy.md).
 
 Defaults live in `src/main/resources/application.yml`, and
 [`config/application-example.yml`](config/application-example.yml) is a fully
