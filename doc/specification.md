@@ -316,6 +316,12 @@ with label, finite 0..1 confidence, and review rationale. Provider SDKs and
 transport types belong exclusively to infrastructure adapters; domain and use
 case code can swap remote or local implementations without modification.
 
+AI suggestions are partitioned by a validated configurable 0..1 confidence
+threshold. Suggestions below the threshold always enter the mandatory human
+review queue and never become automatically eligible. A reviewed suggestion
+records an explicit `ACCEPT` or `REJECT` decision; accepting low confidence is
+therefore possible only as a human action.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google
