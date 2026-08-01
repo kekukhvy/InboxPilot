@@ -1,0 +1,59 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and publish release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the tagged source
+        uses: actions/checkout@v4
+
+      - name: Validate the Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build release artifacts
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          VERSION="${RELEASE_TAG#v}"
+          ./gradlew clean build -PreleaseVersion="$VERSION" --no-daemon
+          cp "build/libs/inboxpilot-$VERSION.jar" \
+            "build/distributions/inboxpilot-$VERSION.jar"
+          sha256sum \
+            "build/distributions/inboxpilot-$VERSION.jar" \
+            "build/distributions/inboxpilot-$VERSION.zip" \
+            "build/distributions/inboxpilot-$VERSION.tar.gz" \
+            > build/distributions/SHA256SUMS
+
+      - name: Publish GitHub release and generated changelog
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            build/distributions/inboxpilot-*.jar
+            build/distributions/inboxpilot-*.zip
+            build/distributions/inboxpilot-*.tar.gz
+            build/distributions/SHA256SUMS
