@@ -242,6 +242,11 @@ removals, and sorted desired labels. Sequential rule actions are reduced to the
 final desired state, so cancelling changes disappear from the diff. This domain
 operation has no mailbox port and therefore cannot write to Gmail.
 
+Classification assessment partitions every dry-run message into exactly one
+review bucket: `clean` for one matched rule, `ambiguous` for multiple matched
+rules, and `unmatched` for none. Ambiguous plans retain every matched rule and
+their computed label diff but are not eligible for automatic execution.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google
