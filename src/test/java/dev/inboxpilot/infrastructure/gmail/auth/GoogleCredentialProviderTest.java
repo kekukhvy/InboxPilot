@@ -8,6 +8,7 @@ import dev.inboxpilot.application.port.CredentialProviderException;
 import dev.inboxpilot.infrastructure.config.BatchingProperties;
 import dev.inboxpilot.infrastructure.config.AiProperties;
 import dev.inboxpilot.infrastructure.config.CheckpointProperties;
+import dev.inboxpilot.infrastructure.config.DashboardProperties;
 import dev.inboxpilot.infrastructure.config.InboxPilotProperties;
 import dev.inboxpilot.infrastructure.config.OAuthProperties;
 import dev.inboxpilot.infrastructure.config.ReportFormat;
@@ -95,6 +96,7 @@ class GoogleCredentialProviderTest {
                 new BatchingProperties(BATCH_SIZE, MAX_RETRIES, BACKOFF, BACKOFF),
                 new ReportProperties(tempDir.resolve("reports"), List.of(ReportFormat.JSON), false),
                 new CheckpointProperties(false, tempDir.resolve("checkpoint.json"), CHECKPOINT_INTERVAL),
-                new AiProperties(false, false, false, 0.9));
+                new AiProperties(false, false, false, 0.9),
+                new DashboardProperties(false, tempDir.resolve("rules.yaml"), 1_024));
     }
 }

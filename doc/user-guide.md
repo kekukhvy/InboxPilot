@@ -83,6 +83,7 @@ All InboxPilot keys are below `inboxpilot`:
 | `reports` | Output directory, JSON/CSV/HTML formats, overwrite policy |
 | `checkpoints` | Resumable scan file and write interval |
 | `ai` | AI opt-in, allowed redacted fields, confidence threshold |
+| `dashboard` | Optional local, read-only report and rule review |
 
 Invalid or contradictory values stop startup and identify the failing key.
 Defaults are in `src/main/resources/application.yml`; the example file explains
@@ -188,6 +189,26 @@ command. Unsubscribe remains manual.
 - Run post-execution verification and repeat-run verification immediately.
 - If OAuth scopes or credentials change, remove the cached token and authorize
   again.
+
+## Optional web dashboard
+
+The dashboard is disabled by default and does not change the normal CLI process.
+Start its local server explicitly:
+
+```bash
+INBOXPILOT_WEB_APPLICATION_TYPE=servlet \
+INBOXPILOT_DASHBOARD_ENABLED=true \
+java -jar build/libs/inboxpilot-0.1.0-SNAPSHOT.jar
+```
+
+Open `http://localhost:8080/dashboard`. The page lists supported JSON, CSV, and
+HTML files from the configured report directory plus the configured YAML rule
+file. Oversized and unsupported files are omitted. Content is rendered as text
+for review; report HTML is never executed inside the dashboard.
+
+The HTTP surface contains GET routes only. There are no execute, label, archive,
+delete, unsubscribe, upload, or rule-edit routes. Bind the server to loopback or
+put authentication in front of it before exposing it beyond the local machine.
 
 ## Troubleshooting
 

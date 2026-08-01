@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>InboxPilot review dashboard</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { margin: 0; background: #10151f; color: #e8edf5; }
+    header, main { max-width: 1100px; margin: auto; padding: 1.5rem; }
+    header p { color: #aab7ca; }
+    .notice { border-left: .3rem solid #60a5fa; padding: .8rem 1rem; background: #172033; }
+    .layout { display: grid; grid-template-columns: minmax(15rem, 1fr) 2fr; gap: 1rem; }
+    section { background: #172033; border: 1px solid #2a3951; border-radius: .6rem; padding: 1rem; }
+    button { width: 100%; text-align: left; margin: .25rem 0; padding: .7rem;
+      color: inherit; background: #202c40; border: 1px solid #364762; border-radius: .4rem; }
+    button:hover, button:focus { border-color: #60a5fa; }
+    small { display: block; color: #aab7ca; margin-top: .25rem; }
+    pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 65vh; overflow: auto; }
+    @media (max-width: 720px) { .layout { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>InboxPilot review dashboard</h1>
+    <p class="notice">Read-only: this dashboard has no execute, archive, delete, label, or unsubscribe action.</p>
+  </header>
+  <main class="layout">
+    <section>
+      <h2>Reports and rules</h2>
+      <div id="documents" aria-live="polite">Loading…</div>
+    </section>
+    <section>
+      <h2 id="preview-title">Preview</h2>
+      <pre id="preview">Select a document to review its local content.</pre>
+    </section>
+  </main>
+  <script>
+    const documents = document.querySelector('#documents');
+    const preview = document.querySelector('#preview');
+    const title = document.querySelector('#preview-title');
+
+    const show = async (item) => {
+      const response = await fetch(`/dashboard/api/documents/${encodeURIComponent(item.id)}`);
+      if (!response.ok) throw new Error('Document is no longer available');
+      const detail = await response.json();
+      title.textContent = detail.name;
+      preview.textContent = detail.content;
+    };
+
+    fetch('/dashboard/api/documents')
+      .then((response) => response.json())
+      .then((items) => {
+        documents.textContent = '';
+        if (items.length === 0) documents.textContent = 'No reviewable documents found.';
+        items.forEach((item) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.textContent = item.name;
+          const detail = document.createElement('small');
+          detail.textContent = `${item.kind.toLowerCase()} · ${item.size} bytes`;
+          button.append(detail);
+          button.addEventListener('click', () => show(item).catch(fail));
+          documents.append(button);
+        });
+      })
+      .catch(fail);
+
+    function fail(error) {
+      preview.textContent = error.message;
+    }
+  </script>
+</body>
+</html>

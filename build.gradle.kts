@@ -30,6 +30,7 @@ repositories {
 dependencies {
     implementation(libs.spring.boot.starter)
     implementation(libs.spring.boot.starter.validation)
+    implementation(libs.spring.boot.starter.web)
 
     // Desktop OAuth for Gmail (issue #9): the loopback authorization-code flow
     // and the token cache it persists to the configured token store.
