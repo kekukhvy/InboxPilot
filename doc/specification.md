@@ -133,6 +133,12 @@ received timestamps, the sorted union of current labels, and up to five sample
 subjects selected from oldest to newest messages. The Gmail `UNREAD` label is
 the source of unread counts.
 
+Inventory reports are deterministic contracts. CSV emits one stable header and
+sender/domain rows with RFC-style quoting for commas, quotes, and line breaks.
+JSON uses a stable field order and properly escapes string values. Both formats
+preserve the sorted inventory order, making repeated exports byte-for-byte
+comparable when the source inventory is unchanged.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google

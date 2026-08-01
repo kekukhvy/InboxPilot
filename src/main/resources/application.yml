@@ -58,7 +58,7 @@ inboxpilot:
     output-directory: ${INBOXPILOT_REPORT_DIR:./reports}
     formats:
       - JSON
-      - HTML
+      - CSV
     overwrite: false
 
   checkpoints:

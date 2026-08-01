@@ -92,6 +92,10 @@ Discard saved scan progress explicitly with:
 Checkpoint writes atomically replace the configured file. A scan resumes only
 when its configuration and query fingerprint matches the saved checkpoint.
 
+Inventory reports are written as deterministic `inventory.csv` and
+`inventory.json` files in `inboxpilot.reports.output-directory`. Existing files
+are replaced only when `inboxpilot.reports.overwrite=true`.
+
 ---
 
 ## Configuration
