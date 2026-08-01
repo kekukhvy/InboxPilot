@@ -91,19 +91,39 @@ java -jar build/libs/inboxpilot-0.1.0-SNAPSHOT.jar --logging.level.dev.inboxpilo
 
 ---
 
-## Project layout
+## Architecture
 
-A single Gradle module; boundaries are enforced by package, with dependencies
-pointing inward (see issue #3 for the architecture decision record).
+InboxPilot uses a **hexagonal (ports and adapters)** architecture — see
+[ADR 0001](doc/adr/0001-hexagonal-architecture.md) for the reasoning. A single
+Gradle module; boundaries are enforced by package, with dependencies pointing
+inward.
 
 ```
 src/main/java/dev/inboxpilot/
     InboxPilotApplication.java   # composition root and entry point
     domain/                      # core model and rules — no framework types
-    application/                 # use cases orchestrating the domain
-    infrastructure/              # Gmail, storage, and other outbound adapters
+    application/                 # use cases; declares ports
+    infrastructure/              # adapters: Gmail, storage, files
     cli/                         # command-line entry points
 ```
+
+| Layer | May depend on |
+|---|---|
+| `domain` | *nothing in the project* |
+| `application` | `domain` |
+| `infrastructure` | `domain`, `application` |
+| `cli` | `domain`, `application` |
+
+Two consequences worth knowing before you add code:
+
+- **`domain` is plain Java.** No Spring, Jackson, SLF4J, or Gmail types. Domain
+  rules are tested with plain JUnit — no Spring context, no mailbox.
+- **Gmail types live only in `infrastructure`.** Everything else speaks in domain
+  terms, via ports declared in `application`.
+
+These are not honour-system rules: `ArchitectureTest` fails the build if a
+boundary is crossed, so a violation shows up in `./gradlew test` rather than in
+review.
 
 Dependency versions are centralized in
 [`gradle/libs.versions.toml`](gradle/libs.versions.toml); `build.gradle.kts`
