@@ -83,6 +83,15 @@ Quote the complete `--args` value when the query contains spaces or Gmail
 operators. Both commands are read-only: they neither apply labels nor otherwise
 change mailbox state.
 
+Discard saved scan progress explicitly with:
+
+```bash
+./gradlew bootRun --args='checkpoint reset'
+```
+
+Checkpoint writes atomically replace the configured file. A scan resumes only
+when its configuration and query fingerprint matches the saved checkpoint.
+
 ---
 
 ## Configuration
