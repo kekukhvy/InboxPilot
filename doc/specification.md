@@ -322,6 +322,13 @@ review queue and never become automatically eligible. A reviewed suggestion
 records an explicit `ACCEPT` or `REJECT` decision; accepting low confidence is
 therefore possible only as a human action.
 
+Only explicitly accepted AI suggestions can be converted to rules. Conversion
+produces deterministic schema-version-1 sender-domain rules with stable IDs,
+safe `add-label` actions, `ai-confirmed` provenance, and a positive example.
+Rejected suggestions are omitted. The complete accepted set is persisted as
+`accepted-ai-rules.yaml`, and the generated artifact must parse back to the same
+domain rule set.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google
