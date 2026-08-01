@@ -32,11 +32,11 @@ class CheckpointResumeIntegrationTest {
     @DisplayName("continues aggregate state from an interrupted scan")
     void resumesAggregateState() {
         FileCheckpointStore store = new FileCheckpointStore(directory.resolve(FILE_NAME));
-        store.save(new ScanCheckpoint(FINGERPRINT, List.of(message(FIRST_ID))));
+        store.save(new ScanCheckpoint(FINGERPRINT, RECEIVED_AT, List.of(message(FIRST_ID))));
 
         List<MailMessage> resumed = new ArrayList<>(store.load(FINGERPRINT).orElseThrow().messages());
         resumed.add(message(SECOND_ID));
-        store.save(new ScanCheckpoint(FINGERPRINT, resumed));
+        store.save(new ScanCheckpoint(FINGERPRINT, RECEIVED_AT, resumed));
 
         assertThat(store.load(FINGERPRINT).orElseThrow().messages())
                 .extracting(message -> message.id().value())

@@ -1,8 +1,11 @@
 package dev.inboxpilot.application.port;
 
 import dev.inboxpilot.domain.message.MailMessage;
+import dev.inboxpilot.domain.message.MessageId;
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
+import java.util.function.Consumer;
 
 /**
  * Port for reading messages from a mailbox.
@@ -30,5 +33,20 @@ public interface MessageSource {
      */
     default List<MailMessage> fetchSince(Instant since, int maximumMessages) {
         return fetchSince(since).stream().limit(maximumMessages).toList();
+    }
+
+    /** Fetches only unfinished messages and publishes durable batch boundaries. */
+    default List<MailMessage> fetchSince(
+            Instant since,
+            int maximumMessages,
+            Set<MessageId> completedMessageIds,
+            Consumer<List<MailMessage>> completedBatch) {
+        List<MailMessage> messages = fetchSince(since, maximumMessages).stream()
+                .filter(message -> !completedMessageIds.contains(message.id()))
+                .toList();
+        if (!messages.isEmpty()) {
+            completedBatch.accept(messages);
+        }
+        return messages;
     }
 }

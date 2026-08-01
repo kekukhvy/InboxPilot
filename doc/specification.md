@@ -132,13 +132,18 @@ checkpoints, reports, or other serialized models are versioned contracts:
 incompatible field changes must update their version marker and handle older
 versions deliberately.
 
-Scan checkpoints use a versioned binary contract containing the canonical
-configuration/query fingerprint and every provider-independent message gathered
-so far. Writes go to a same-directory temporary file and replace the checkpoint
+Scan checkpoints use a versioned binary contract containing the canonical scan
+configuration fingerprint, the original query time boundary, and every
+provider-independent message gathered so far. After each completed metadata
+batch, writes go to a same-directory temporary file and replace the checkpoint
 with an atomic move; filesystems without atomic-move support reject the write.
-Resume rejects a fingerprint mismatch instead of combining incompatible scan
-state. `checkpoint reset` is the explicit destructive command for discarding
-saved progress.
+A resumed scan restores the original boundary and accumulated messages, lists
+the same bounded Gmail result set, and omits already persisted message IDs from
+metadata retrieval. Final reports aggregate restored and new messages. The
+checkpoint is removed only after every configured report succeeds, while fetch
+or report failure preserves it. Resume rejects a fingerprint mismatch instead
+of combining incompatible scan state. `checkpoint reset` is the explicit
+destructive command for discarding saved progress.
 
 ## Inventory aggregation
 

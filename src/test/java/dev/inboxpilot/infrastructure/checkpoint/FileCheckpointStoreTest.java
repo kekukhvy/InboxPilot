@@ -35,7 +35,7 @@ class FileCheckpointStoreTest {
     @DisplayName("round trips progress and aggregate source messages")
     void roundTripsCheckpoint() {
         FileCheckpointStore store = new FileCheckpointStore(directory.resolve(FILE_NAME));
-        ScanCheckpoint checkpoint = new ScanCheckpoint(FINGERPRINT, List.of(message()));
+        ScanCheckpoint checkpoint = new ScanCheckpoint(FINGERPRINT, RECEIVED_AT, List.of(message()));
 
         store.save(checkpoint);
 
@@ -46,7 +46,7 @@ class FileCheckpointStoreTest {
     @DisplayName("rejects resume when configuration fingerprint changed")
     void rejectsIncompatibleResume() {
         FileCheckpointStore store = new FileCheckpointStore(directory.resolve(FILE_NAME));
-        store.save(new ScanCheckpoint(FINGERPRINT, List.of(message())));
+        store.save(new ScanCheckpoint(FINGERPRINT, RECEIVED_AT, List.of(message())));
 
         assertThatExceptionOfType(CheckpointStoreException.class)
                 .isThrownBy(() -> store.load(OTHER_FINGERPRINT))
@@ -58,7 +58,7 @@ class FileCheckpointStoreTest {
     void resetsCheckpoint() {
         Path file = directory.resolve(FILE_NAME);
         FileCheckpointStore store = new FileCheckpointStore(file);
-        store.save(new ScanCheckpoint(FINGERPRINT, List.of(message())));
+        store.save(new ScanCheckpoint(FINGERPRINT, RECEIVED_AT, List.of(message())));
 
         store.reset();
 

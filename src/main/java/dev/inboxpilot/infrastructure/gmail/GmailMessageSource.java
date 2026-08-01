@@ -16,6 +16,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -105,13 +107,25 @@ public class GmailMessageSource implements MessageSource {
 
     @Override
     public List<MailMessage> fetchSince(Instant since, int maximumMessages) {
+        return fetchSince(since, maximumMessages, Set.of(), batch -> { });
+    }
+
+    @Override
+    public List<MailMessage> fetchSince(
+            Instant since,
+            int maximumMessages,
+            Set<MessageId> completedMessageIds,
+            Consumer<List<MailMessage>> completedBatch) {
         logger.debug(FETCH_LOG_MESSAGE, since);
         try {
             List<String> messageIds = listAllMessageIds(
-                    QUERY_PREFIX + since.getEpochSecond(), maximumMessages);
+                    QUERY_PREFIX + since.getEpochSecond(), maximumMessages).stream()
+                    .filter(id -> !completedMessageIds.contains(new MessageId(id)))
+                    .toList();
             InventoryProgressTracker progress = new InventoryProgressTracker(
                     messageIds.size(), progressReporter, clock);
-            return fetchBatches(messageIds, progress).stream().sorted(OLDEST_FIRST).toList();
+            return fetchBatches(messageIds, progress, completedBatch).stream()
+                    .sorted(OLDEST_FIRST).toList();
         } catch (IOException exception) {
             throw new MessageSourceException(METADATA_FAILURE + exception.getMessage(), exception);
         }
@@ -136,23 +150,27 @@ public class GmailMessageSource implements MessageSource {
 
     private List<MailMessage> fetchBatches(
             List<String> messageIds,
-            InventoryProgressTracker progress) throws IOException {
+            InventoryProgressTracker progress,
+            Consumer<List<MailMessage>> completedBatch) throws IOException {
         List<MailMessage> messages = new ArrayList<>();
         int start = 0;
         while (start < messageIds.size()) {
             int end = Math.min(start + batchSize, messageIds.size());
-            fetchWithRetries(messageIds.subList(start, end), messages, progress);
+            List<MailMessage> batch = fetchWithRetries(
+                    messageIds.subList(start, end), progress);
+            messages.addAll(batch);
+            completedBatch.accept(batch);
             progress.recordProcessed(end - start);
             start = end;
         }
         return List.copyOf(messages);
     }
 
-    private void fetchWithRetries(
+    private List<MailMessage> fetchWithRetries(
             List<String> messageIds,
-            List<MailMessage> messages,
             InventoryProgressTracker progress)
             throws IOException {
+        List<MailMessage> messages = new ArrayList<>();
         List<String> pending = List.copyOf(messageIds);
         int retriesCompleted = 0;
         while (!pending.isEmpty()) {
@@ -165,6 +183,7 @@ public class GmailMessageSource implements MessageSource {
                 pauseBeforeRetry(pending.size(), retriesCompleted, progress);
             }
         }
+        return List.copyOf(messages);
     }
 
     private List<String> retryableIds(List<GmailMetadataFailure> failures, int retriesCompleted) {

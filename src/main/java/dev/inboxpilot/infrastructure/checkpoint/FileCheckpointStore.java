@@ -25,7 +25,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class FileCheckpointStore implements CheckpointStore {
 
-    private static final int FORMAT_VERSION = 1;
+    private static final int FORMAT_VERSION = 2;
     private static final String TEMP_SUFFIX = ".tmp";
     private static final String READ_FAILURE = "Checkpoint could not be read: ";
     private static final String WRITE_FAILURE = "Checkpoint could not be written atomically: ";
@@ -54,7 +54,8 @@ public class FileCheckpointStore implements CheckpointStore {
             validateVersion(input.readInt());
             String fingerprint = input.readUTF();
             validateFingerprint(expectedFingerprint, fingerprint);
-            return Optional.of(new ScanCheckpoint(fingerprint, readMessages(input)));
+            Instant since = Instant.ofEpochMilli(input.readLong());
+            return Optional.of(new ScanCheckpoint(fingerprint, since, readMessages(input)));
         } catch (IOException exception) {
             throw new CheckpointStoreException(READ_FAILURE + file, exception);
         }
@@ -95,6 +96,7 @@ public class FileCheckpointStore implements CheckpointStore {
         try (DataOutputStream output = new DataOutputStream(Files.newOutputStream(target))) {
             output.writeInt(FORMAT_VERSION);
             output.writeUTF(checkpoint.fingerprint());
+            output.writeLong(checkpoint.since().toEpochMilli());
             output.writeInt(checkpoint.messages().size());
             for (MailMessage message : checkpoint.messages()) {
                 writeMessage(output, message);
