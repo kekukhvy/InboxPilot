@@ -9,7 +9,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import static com.tngtech.archunit.base.DescribedPredicate.describe;
 import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
 /**
@@ -40,6 +42,8 @@ class ArchitectureTest {
     private static final String SPRING_PACKAGES = "org.springframework..";
     private static final String JACKSON_PACKAGES = "com.fasterxml.jackson..";
     private static final String SLF4J_PACKAGES = "org.slf4j..";
+
+    private static final String PORT_PACKAGES = ROOT_PACKAGE + ".application.port..";
 
     private static final String LAYER_SLICES = ROOT_PACKAGE + ".(*)..";
 
@@ -148,6 +152,59 @@ class ArchitectureTest {
                     .should().dependOnClassesThat().resideInAPackage(GOOGLE_API_PACKAGES)
                     .because("only the Gmail adapter may know about Google client types; "
                             + "everything else speaks in domain terms (ADR 0001)")
+                    .check(productionClasses);
+        }
+    }
+
+    /**
+     * Conventions that keep the layer boundaries meaningful once the code grows
+     * past the foundation slices — issue #7. Each rule is here because breaking
+     * it would quietly undo something an earlier ADR decided.
+     */
+    @Nested
+    @DisplayName("conventions")
+    class Conventions {
+
+        @Test
+        @DisplayName("ports are interfaces, so adapters can be swapped and stubbed")
+        void portsAreInterfaces() {
+            classes().that().resideInAPackage(PORT_PACKAGES)
+                    .and().haveSimpleNameNotEndingWith("Exception")
+                    .should().beInterfaces()
+                    .because("a port fixed to one class cannot be stubbed in a test "
+                            + "or replaced by another provider (ADR 0001)")
+                    .check(productionClasses);
+        }
+
+        @Test
+        @DisplayName("the domain carries no Spring annotations")
+        void domainHasNoSpringAnnotations() {
+            noClasses().that().resideInAPackage(DOMAIN_PACKAGES)
+                    .should().beAnnotatedWith(describe("a Spring annotation",
+                            annotation -> annotation.getRawType()
+                                    .getPackageName().startsWith("org.springframework")))
+                    .because("the domain must be constructible with new, without a "
+                            + "container (ADR 0001)")
+                    .check(productionClasses);
+        }
+
+        @Test
+        @DisplayName("nothing writes to the console instead of logging")
+        void nothingWritesToTheConsole() {
+            noClasses().should().accessField(System.class, "out")
+                    .orShould().accessField(System.class, "err")
+                    .because("console writes bypass the log levels and the operational "
+                            + "context that make a run diagnosable (issue #5)")
+                    .check(productionClasses);
+        }
+
+        @Test
+        @DisplayName("no production code is left depending on a test scaffold")
+        void noProductionCodeDependsOnTests() {
+            noClasses().should().dependOnClassesThat()
+                    .resideInAnyPackage("org.junit..", "org.assertj..", "org.mockito..")
+                    .because("a test dependency reaching production code means a stub "
+                            + "shipped by accident")
                     .check(productionClasses);
         }
     }
