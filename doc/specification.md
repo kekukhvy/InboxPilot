@@ -293,6 +293,11 @@ Gmail adapter performs one batch modification that removes only `INBOX`.
 Neither the application port nor the adapter exposes delete, trash, or any
 other state change.
 
+Deletion reporting combines stale-newsletter and transient-message detections
+into deterministic review-only candidates with message ID, category, and
+reason. It exports escaped CSV but exposes no delete/trash application port or
+action; deletion requires a separately designed future explicit command.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google
