@@ -265,6 +265,12 @@ message. Every row records rule ID, message ID, sorted old labels, planned label
 state, observed new label state, and `PLANNED`, `APPLIED`, `FAILED`, or `SKIPPED`
 result. The report has a deterministic CSV representation with escaped fields.
 
+Post-execution verification compares every planned final label set with freshly
+scanned message metadata. Each entry is `MATCH`, `LABEL_MISMATCH`, or
+`MESSAGE_MISSING` and lists exact missing and unexpected labels. Verification
+succeeds only when every planned message is present with precisely the expected
+labels.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google
