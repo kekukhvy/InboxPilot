@@ -177,6 +177,11 @@ and HTTPS URIs. Malformed, insecure, and unsupported mechanisms are ignored.
 Parsing is inert: extraction never opens a URL, sends mail, or changes mailbox
 state.
 
+Cleanup candidate analysis is metadata-only and requires an explicit age
+cutoff. It classifies old newsletters, obsolete alerts, OTP messages, and
+promotional traffic into an immutable review report. The report has no mutation
+or deletion operation; mailbox changes remain a separate explicit execute step.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google
