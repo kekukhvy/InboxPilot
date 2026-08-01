@@ -1,7 +1,7 @@
 # Build output
 build/
 out/
-bin/
+/bin/
 
 # Gradle
 .gradle/
