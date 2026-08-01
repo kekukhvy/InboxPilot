@@ -21,12 +21,13 @@ public class InventoryReportWriter {
 
     private static final String CSV_FILE = "inventory.csv";
     private static final String JSON_FILE = "inventory.json";
+    private static final String HTML_FILE = "inventory.html";
     private static final String WRITE_FAILURE = "Inventory report could not be written: ";
-    private static final String HTML_UNSUPPORTED = "HTML inventory export is not implemented";
 
     private final ReportProperties properties;
     private final InventoryCsvRenderer csvRenderer = new InventoryCsvRenderer();
     private final InventoryJsonRenderer jsonRenderer = new InventoryJsonRenderer();
+    private final InventoryHtmlRenderer htmlRenderer = new InventoryHtmlRenderer();
 
     @Autowired
     public InventoryReportWriter(InboxPilotProperties properties) {
@@ -54,7 +55,7 @@ public class InventoryReportWriter {
         return switch (format) {
             case CSV -> writeFile(CSV_FILE, csvRenderer.render(inventory));
             case JSON -> writeFile(JSON_FILE, jsonRenderer.render(inventory));
-            case HTML -> throw new IllegalArgumentException(HTML_UNSUPPORTED);
+            case HTML -> writeFile(HTML_FILE, htmlRenderer.render(inventory));
         };
     }
 

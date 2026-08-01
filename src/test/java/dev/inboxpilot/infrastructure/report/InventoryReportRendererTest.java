@@ -22,6 +22,7 @@ class InventoryReportRendererTest {
     private static final Instant RECEIVED_AT = Instant.parse("2026-08-01T10:00:00Z");
     private static final String CSV_ESCAPED_SUBJECT = "\"Digest, \"\"weekly\"\"\"";
     private static final String JSON_ESCAPED_SUBJECT = "Digest, \\\"weekly\\\"";
+    private static final String UNSAFE_LABEL = "<script>alert('x')</script>";
 
     @Test
     @DisplayName("CSV is deterministic and escapes spreadsheet fields")
@@ -43,6 +44,23 @@ class InventoryReportRendererTest {
         String second = renderer.render(inventory());
 
         assertThat(first).isEqualTo(second).contains(JSON_ESCAPED_SUBJECT, SENDER, DOMAIN);
+    }
+
+    @Test
+    @DisplayName("HTML has navigation, summary cards, sortable tables, and escaped values")
+    void rendersNavigableHtml() {
+        InventoryStatistics statistics = new InventoryStatistics(
+                1, 1, RECEIVED_AT, RECEIVED_AT, List.of(UNSAFE_LABEL), List.of(SUBJECT));
+        Inventory inventory = new Inventory(
+                List.of(new SenderInventory(new EmailAddress(SENDER), statistics)),
+                List.of(new DomainInventory(DOMAIN, statistics)));
+
+        String html = new InventoryHtmlRenderer().render(inventory);
+
+        assertThat(html)
+                .contains("href=\"#senders\"", "class=\"cards\"", "<table>", "localeCompare")
+                .contains("&lt;script&gt;alert(&#39;x&#39;)&lt;/script&gt;")
+                .doesNotContain(UNSAFE_LABEL);
     }
 
     private static Inventory inventory() {
