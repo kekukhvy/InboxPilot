@@ -124,6 +124,15 @@ Resume rejects a fingerprint mismatch instead of combining incompatible scan
 state. `checkpoint reset` is the explicit destructive command for discarding
 saved progress.
 
+## Inventory aggregation
+
+Inventory aggregation is a framework-free domain operation over `MailMessage`
+values. It produces deterministic, key-sorted views for exact sender addresses
+and sender domains. Each entry records total and unread counts, first and last
+received timestamps, the sorted union of current labels, and up to five sample
+subjects selected from oldest to newest messages. The Gmail `UNREAD` label is
+the source of unread counts.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google
