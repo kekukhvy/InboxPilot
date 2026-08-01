@@ -187,6 +187,11 @@ proposals. New labels require an explicit mailbox-volume threshold, duplicate
 labels become merge candidates, and non-canonical visible names become rename
 candidates. Planning is read-only and produces no provider operations.
 
+HTML analysis export is a self-contained UTF-8 document with summary cards,
+anchor navigation, and client-side sortable sender and domain tables. All
+mailbox-derived values are HTML-escaped before rendering, and the document does
+not load remote resources.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google
