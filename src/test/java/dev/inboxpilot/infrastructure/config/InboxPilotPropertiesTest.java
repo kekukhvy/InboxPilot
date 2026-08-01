@@ -103,6 +103,7 @@ class InboxPilotPropertiesTest {
         assertThat(properties.ai().enabled()).isFalse();
         assertThat(properties.ai().includeRedactedSubject()).isFalse();
         assertThat(properties.ai().includeLabelIds()).isFalse();
+        assertThat(properties.ai().minimumAutomaticConfidence()).isEqualTo(0.9);
     }
 
     @Test

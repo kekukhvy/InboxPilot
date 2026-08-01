@@ -95,6 +95,6 @@ class GoogleCredentialProviderTest {
                 new BatchingProperties(BATCH_SIZE, MAX_RETRIES, BACKOFF, BACKOFF),
                 new ReportProperties(tempDir.resolve("reports"), List.of(ReportFormat.JSON), false),
                 new CheckpointProperties(false, tempDir.resolve("checkpoint.json"), CHECKPOINT_INTERVAL),
-                new AiProperties(false, false, false));
+                new AiProperties(false, false, false, 0.9));
     }
 }

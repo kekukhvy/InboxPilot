@@ -65,6 +65,7 @@ inboxpilot:
     enabled: ${INBOXPILOT_AI_ENABLED:false}
     include-redacted-subject: ${INBOXPILOT_AI_INCLUDE_SUBJECT:false}
     include-label-ids: ${INBOXPILOT_AI_INCLUDE_LABELS:false}
+    minimum-automatic-confidence: ${INBOXPILOT_AI_MIN_CONFIDENCE:0.90}
 
   checkpoints:
     enabled: true
