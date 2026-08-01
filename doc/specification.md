@@ -260,6 +260,11 @@ set. After execution, repeat-run verification re-evaluates fresh metadata and
 reports every message that would still change; success requires exactly zero
 such message IDs.
 
+Classification audit reporting emits one deterministic row per matched rule and
+message. Every row records rule ID, message ID, sorted old labels, planned label
+state, observed new label state, and `PLANNED`, `APPLIED`, `FAILED`, or `SKIPPED`
+result. The report has a deterministic CSV representation with escaped fields.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google
