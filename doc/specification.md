@@ -225,6 +225,11 @@ required non-blank label name. Evaluation compiles matched actions into an
 ordered, rule-attributed `LabelChangePlan`; it never applies that plan. Archive,
 delete, and unknown actions fail validation and are excluded from this release.
 
+Rules may embed ordered metadata-only examples under `tests`. Every example has
+a name, sender, subject, and boolean `expect-match`; the rule test runner reports
+the expected and actual result without starting Spring or contacting a mailbox.
+The field is optional, so existing schema-version-1 documents remain compatible.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google

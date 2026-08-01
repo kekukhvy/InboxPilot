@@ -7,6 +7,8 @@ import dev.inboxpilot.domain.rules.RuleDefinition;
 import dev.inboxpilot.domain.rules.RuleId;
 import dev.inboxpilot.domain.rules.RuleMetadata;
 import dev.inboxpilot.domain.rules.RuleSet;
+import dev.inboxpilot.domain.rules.RuleTestCase;
+import dev.inboxpilot.domain.message.EmailAddress;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -58,8 +60,9 @@ public final class RuleYamlParser {
         String behavior = text(required(rule, "conflict-behavior", path + ".conflict-behavior"),
                 path + ".conflict-behavior");
         RuleMetadata metadata = metadata(required(rule, "metadata", path + ".metadata"), path + ".metadata");
+        List<RuleTestCase> tests = tests(rule.get("tests"), path + ".tests");
         return new RuleDefinition(id, priority, condition, actions,
-                enumValue(behavior, path + ".conflict-behavior"), metadata);
+                enumValue(behavior, path + ".conflict-behavior"), metadata, tests);
     }
 
     private RuleConditionSpec condition(Object raw, String path) {
@@ -94,6 +97,22 @@ public final class RuleYamlParser {
                 .map(value -> text(value, path + ".tags[]"))
                 .toList();
         return new RuleMetadata(description, source, tags);
+    }
+
+    private List<RuleTestCase> tests(Object raw, String path) {
+        List<Object> entries = optionalList(raw, path);
+        List<RuleTestCase> tests = new ArrayList<>();
+        for (int index = 0; index < entries.size(); index++) {
+            String itemPath = path + "[" + index + "]";
+            Map<String, Object> test = map(entries.get(index), itemPath, false);
+            String name = text(required(test, "name", itemPath + ".name"), itemPath + ".name");
+            String sender = text(required(test, "sender", itemPath + ".sender"), itemPath + ".sender");
+            String subject = text(required(test, "subject", itemPath + ".subject"), itemPath + ".subject");
+            boolean expected = bool(required(test, "expect-match", itemPath + ".expect-match"),
+                    itemPath + ".expect-match");
+            tests.add(new RuleTestCase(name, new EmailAddress(sender), subject, expected));
+        }
+        return tests;
     }
 
     private static Map<String, String> stringMap(Object raw, String path) {
@@ -146,6 +165,13 @@ public final class RuleYamlParser {
             throw invalid(path, "expected an integer");
         }
         return value.intValue();
+    }
+
+    private static boolean bool(Object raw, String path) {
+        if (!(raw instanceof Boolean value)) {
+            throw invalid(path, "expected true or false");
+        }
+        return value;
     }
 
     private static RuleConflictBehavior enumValue(String value, String path) {

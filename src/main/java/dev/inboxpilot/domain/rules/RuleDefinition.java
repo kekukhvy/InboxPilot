@@ -10,7 +10,18 @@ public record RuleDefinition(
         RuleConditionSpec condition,
         List<RuleActionSpec> actions,
         RuleConflictBehavior conflictBehavior,
-        RuleMetadata metadata) {
+        RuleMetadata metadata,
+        List<RuleTestCase> tests) {
+
+    public RuleDefinition(
+            RuleId id,
+            int priority,
+            RuleConditionSpec condition,
+            List<RuleActionSpec> actions,
+            RuleConflictBehavior conflictBehavior,
+            RuleMetadata metadata) {
+        this(id, priority, condition, actions, conflictBehavior, metadata, List.of());
+    }
 
     public RuleDefinition {
         Objects.requireNonNull(id, "id");
@@ -18,6 +29,7 @@ public record RuleDefinition(
         Objects.requireNonNull(conflictBehavior, "conflictBehavior");
         Objects.requireNonNull(metadata, "metadata");
         actions = List.copyOf(actions);
+        tests = List.copyOf(tests);
         if (priority < 0) {
             throw new IllegalArgumentException("Rule priority must not be negative");
         }
