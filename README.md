@@ -8,7 +8,7 @@ dry run first, so nothing changes in your mailbox until you say so.
 
 > **Status:** foundation with desktop Gmail OAuth authorization, label and
 > paginated message-ID discovery, and metadata-only batch retrieval. The
-> inventory pipeline, rule engine, and classification land in later slices —
+> inventory reporting, rule engine, and classification land in later slices —
 > see the [open issues](https://github.com/kekukhvy/InboxPilot/issues).
 
 ---
