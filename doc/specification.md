@@ -247,6 +247,13 @@ review bucket: `clean` for one matched rule, `ambiguous` for multiple matched
 rules, and `unmatched` for none. Ambiguous plans retain every matched rule and
 their computed label diff but are not eligible for automatic execution.
 
+Gmail label execution uses `users.messages.batchModify` through a narrow
+application port. Its request type accepts only message IDs and add/remove user
+label IDs (`Label_*`); system labels such as `INBOX`, `UNREAD`, `STARRED`,
+`IMPORTANT`, categories, trash, and spam cannot cross the port. Consequently
+classification execution cannot alter read, star, importance, category,
+archive, spam, or deletion state.
+
 ## Current limitations and deferred work
 
 - The OAuth browser round-trip requires a real browser, loopback port, Google

@@ -108,6 +108,10 @@ class GmailGatewayTest {
             return new GmailMetadataBatch(List.of(), List.of());
         }
 
+        @Override
+        public void batchModifyLabels(
+                List<String> messageIds, List<String> addLabelIds, List<String> removeLabelIds) {}
+
         private void failWhenConfigured() throws IOException {
             if (failure != null) {
                 throw failure;

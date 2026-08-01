@@ -178,5 +178,9 @@ class GmailMessageSourceTest {
             requestedBatches.add(List.copyOf(ids));
             return results.get(resultIndex++);
         }
+
+        @Override
+        public void batchModifyLabels(
+                List<String> ids, List<String> addLabelIds, List<String> removeLabelIds) {}
     }
 }

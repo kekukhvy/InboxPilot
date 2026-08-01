@@ -10,4 +10,8 @@ interface GmailApiClient {
     GmailMessagePage listMessageIds(String query, String pageToken) throws IOException;
 
     GmailMetadataBatch getMessageMetadata(List<String> messageIds) throws IOException;
+
+    void batchModifyLabels(
+            List<String> messageIds, List<String> addLabelIds, List<String> removeLabelIds)
+            throws IOException;
 }

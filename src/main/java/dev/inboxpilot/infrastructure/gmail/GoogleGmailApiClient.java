@@ -12,6 +12,7 @@ import com.google.api.services.gmail.model.ListLabelsResponse;
 import com.google.api.services.gmail.model.ListMessagesResponse;
 import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.MessagePartHeader;
+import com.google.api.services.gmail.model.BatchModifyMessagesRequest;
 import dev.inboxpilot.application.model.AccessToken;
 import dev.inboxpilot.application.port.CredentialProvider;
 import java.io.IOException;
@@ -92,6 +93,17 @@ class GoogleGmailApiClient implements GmailApiClient {
         }
         batch.execute();
         return new GmailMetadataBatch(messages, failures);
+    }
+
+    @Override
+    public void batchModifyLabels(
+            List<String> messageIds, List<String> addLabelIds, List<String> removeLabelIds)
+            throws IOException {
+        BatchModifyMessagesRequest request = new BatchModifyMessagesRequest()
+                .setIds(messageIds)
+                .setAddLabelIds(addLabelIds)
+                .setRemoveLabelIds(removeLabelIds);
+        gmail().users().messages().batchModify(USER_ID, request).execute();
     }
 
     private void queueMetadataRequest(
