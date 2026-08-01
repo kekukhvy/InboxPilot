@@ -6,10 +6,11 @@ InboxPilot inventories a Gmail mailbox, proposes a label taxonomy from what it
 finds, and applies declarative YAML rules to classify and clean up mail — with a
 dry run first, so nothing changes in your mailbox until you say so.
 
-> **Status:** foundation with desktop Gmail OAuth authorization, label and
-> paginated message-ID discovery, and metadata-only batch retrieval. The
-> inventory reporting, rule engine, and classification land in later slices —
-> see the [open issues](https://github.com/kekukhvy/InboxPilot/issues).
+> **Status:** inventory, analysis, YAML rules, classification planning, safe
+> label/archive adapters, cleanup reporting, rollback/verification, and optional
+> privacy-preserving AI foundations are implemented. See the
+> [user guide](doc/user-guide.md) for the supported workflow and current CLI
+> surface.
 
 ---
 
@@ -103,6 +104,8 @@ the scan has enough elapsed progress to calculate it.
 ---
 
 ## Configuration
+
+For the complete operational workflow, see the [InboxPilot user guide](doc/user-guide.md).
 
 Defaults live in `src/main/resources/application.yml`, and
 [`config/application-example.yml`](config/application-example.yml) is a fully
@@ -203,7 +206,7 @@ scanner halves subsequent batch sizes for the remainder of that run.
 | Key | Meaning | Default |
 |---|---|---|
 | `output-directory` | Where reports are written | `./reports` |
-| `formats` | One or more of `JSON`, `CSV`, `HTML` | `JSON`, `HTML` |
+| `formats` | One or more of `JSON`, `CSV`, `HTML` | `JSON`, `CSV` |
 | `overwrite` | Whether an existing report may be replaced | `false` |
 
 **Checkpoints** (`inboxpilot.checkpoints.*`) — resumable progress

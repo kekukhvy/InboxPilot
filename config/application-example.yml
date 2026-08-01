@@ -84,6 +84,15 @@ inboxpilot:
     overwrite: false
 
   # ---------------------------------------------------------------------------
+  # Optional AI classification (disabled and data-minimal by default)
+  # ---------------------------------------------------------------------------
+  ai:
+    enabled: false
+    include-redacted-subject: false
+    include-label-ids: false
+    minimum-automatic-confidence: 0.90
+
+  # ---------------------------------------------------------------------------
   # Resumable progress
   # ---------------------------------------------------------------------------
   checkpoints:
