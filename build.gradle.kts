@@ -27,6 +27,7 @@ dependencies {
     // and the token cache it persists to the configured token store.
     implementation(libs.google.oauth.client.jetty)
     implementation(libs.google.api.client)
+    implementation(libs.google.api.services.gmail)
 
     // Generates IDE metadata for the @ConfigurationProperties types, so
     // application.yml keys get completion and inline documentation.

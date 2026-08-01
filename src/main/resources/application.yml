@@ -3,7 +3,7 @@ spring:
     name: inboxpilot
   main:
     # InboxPilot is a CLI-style tool, not a server: the context starts, does its
-    # work, and exits. Issue #9+ add the Gmail adapters that run inside it.
+    # work, and exits. The inventory issues add the adapters that run inside it.
     web-application-type: none
 
 logging:
