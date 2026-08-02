@@ -39,7 +39,7 @@ public class InboxPilotCommand implements ApplicationRunner {
     private static final String INVENTORY_SUMMARY = "Inventory complete: %d messages";
     private static final String ANALYSIS_SUMMARY =
             "Analysis complete: %d messages, %d unclassified senders, "
-                    + "%d unclassified domains, %d unused labels, %d duplicate label groups";
+                    + "%d unclassified domains";
     private static final String REPORT_PREFIX = "Report: ";
     private static final String RESET_ACTION = "reset";
     private static final String RESET_CONFIRMATION = "Checkpoint reset";
@@ -180,8 +180,6 @@ public class InboxPilotCommand implements ApplicationRunner {
         return ANALYSIS_SUMMARY.formatted(
                 result.processedMessages(),
                 result.unclassifiedSenders(),
-                result.unclassifiedDomains(),
-                result.unusedLabels(),
-                result.duplicateLabelGroups());
+                result.unclassifiedDomains());
     }
 }

@@ -4,7 +4,5 @@ package dev.inboxpilot.application.analysis;
 public record AnalysisRunResult(
         int processedMessages,
         int unclassifiedSenders,
-        int unclassifiedDomains,
-        int unusedLabels,
-        int duplicateLabelGroups) {
+        int unclassifiedDomains) {
 }

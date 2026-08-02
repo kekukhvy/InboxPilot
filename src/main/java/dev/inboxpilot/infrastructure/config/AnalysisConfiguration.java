@@ -1,9 +1,7 @@
 package dev.inboxpilot.infrastructure.config;
 
 import dev.inboxpilot.application.analysis.AnalysisService;
-import dev.inboxpilot.application.port.MailboxGateway;
-import dev.inboxpilot.application.port.MessageSource;
-import java.time.Clock;
+import dev.inboxpilot.application.port.InventorySnapshotStore;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -12,12 +10,7 @@ import org.springframework.context.annotation.Configuration;
 public class AnalysisConfiguration {
 
     @Bean
-    AnalysisService analysisService(
-            MessageSource source,
-            MailboxGateway gateway,
-            InboxPilotProperties properties) {
-        ScanningProperties scanning = properties.scanning();
-        return new AnalysisService(
-                source, gateway, scanning.lookback(), scanning.maxMessages(), Clock.systemUTC());
+    AnalysisService analysisService(InventorySnapshotStore inventoryStore) {
+        return new AnalysisService(inventoryStore);
     }
 }

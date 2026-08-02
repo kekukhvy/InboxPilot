@@ -2,63 +2,56 @@ package dev.inboxpilot.application.analysis;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import dev.inboxpilot.application.model.MailboxLabel;
-import dev.inboxpilot.application.port.MailboxGateway;
-import dev.inboxpilot.application.port.MessageSource;
+import dev.inboxpilot.application.port.InventorySnapshotStore;
+import dev.inboxpilot.domain.inventory.DomainInventory;
+import dev.inboxpilot.domain.inventory.Inventory;
+import dev.inboxpilot.domain.inventory.InventoryStatistics;
+import dev.inboxpilot.domain.inventory.SenderInventory;
 import dev.inboxpilot.domain.message.EmailAddress;
-import dev.inboxpilot.domain.message.MailMessage;
-import dev.inboxpilot.domain.message.MessageId;
-import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class AnalysisServiceTest {
 
-    private static final Instant NOW = Instant.parse("2026-08-02T12:00:00Z");
-    private static final Duration LOOKBACK = Duration.ofDays(30);
-    private static final int MAXIMUM_MESSAGES = 100;
-    private static final String MESSAGE_ID = "message-1";
-    private static final String SENDER = "sender@example.com";
-    private static final String SUBJECT = "Subject";
-    private static final String USER_LABEL_ID = "Label_user";
-    private static final String USER_LABEL_NAME = "Work";
-    private static final String UNUSED_LABEL_ID = "Label_unused";
-    private static final String SYSTEM_LABEL_ID = "INBOX";
+    private static final String USER_LABEL = "Label_work";
+    private static final String SYSTEM_LABEL = "INBOX";
+    private static final Instant RECEIVED_AT = Instant.parse("2026-08-02T12:00:00Z");
+    private static final int CLASSIFIED_MESSAGES = 2;
+    private static final int UNCLASSIFIED_MESSAGES = 3;
+    private static final String CLASSIFIED_SENDER = "work@example.com";
+    private static final String UNCLASSIFIED_SENDER = "news@example.org";
 
     @Test
-    void analyzesUnclassifiedMessagesAndUserLabelStructure() {
-        MessageSource source = since -> List.of(message());
-        MailboxGateway gateway = new StubMailboxGateway(List.of(
-                new MailboxLabel(USER_LABEL_ID, USER_LABEL_NAME),
-                new MailboxLabel(UNUSED_LABEL_ID, USER_LABEL_NAME),
-                new MailboxLabel(SYSTEM_LABEL_ID, SYSTEM_LABEL_ID)));
-        AnalysisService service = new AnalysisService(
-                source, gateway, LOOKBACK, MAXIMUM_MESSAGES,
-                Clock.fixed(NOW, ZoneOffset.UTC));
+    void analyzesOnlyThePersistedInventorySnapshot() {
+        InventorySnapshotStore store = () -> inventory();
 
-        AnalysisRunResult result = service.run();
+        AnalysisRunResult result = new AnalysisService(store).run();
 
-        assertThat(result).isEqualTo(new AnalysisRunResult(1, 1, 1, 2, 1));
+        assertThat(result).isEqualTo(new AnalysisRunResult(
+                CLASSIFIED_MESSAGES + UNCLASSIFIED_MESSAGES, 1, 1));
     }
 
-    private static MailMessage message() {
-        return new MailMessage(
-                new MessageId(MESSAGE_ID), new EmailAddress(SENDER), SUBJECT,
-                NOW.minusSeconds(1), List.of(SYSTEM_LABEL_ID));
+    private static Inventory inventory() {
+        return new Inventory(
+                List.of(
+                        sender(CLASSIFIED_SENDER, CLASSIFIED_MESSAGES, List.of(USER_LABEL)),
+                        sender(UNCLASSIFIED_SENDER, UNCLASSIFIED_MESSAGES, List.of(SYSTEM_LABEL))),
+                List.of(
+                        domain("example.com", CLASSIFIED_MESSAGES, List.of(USER_LABEL)),
+                        domain("example.org", UNCLASSIFIED_MESSAGES, List.of(SYSTEM_LABEL))));
     }
 
-    private record StubMailboxGateway(List<MailboxLabel> labels) implements MailboxGateway {
-        @Override
-        public List<MailboxLabel> listLabels() {
-            return labels;
-        }
+    private static SenderInventory sender(String value, int count, List<String> labels) {
+        return new SenderInventory(new EmailAddress(value), statistics(count, labels));
+    }
 
-        @Override
-        public List<MessageId> listMessageIds(String query) {
-            return List.of();
-        }
+    private static DomainInventory domain(String value, int count, List<String> labels) {
+        return new DomainInventory(value, statistics(count, labels));
+    }
+
+    private static InventoryStatistics statistics(int count, List<String> labels) {
+        return new InventoryStatistics(
+                count, 0, RECEIVED_AT, RECEIVED_AT, labels, List.of());
     }
 }
