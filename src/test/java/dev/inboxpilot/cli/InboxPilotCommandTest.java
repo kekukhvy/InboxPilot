@@ -147,7 +147,7 @@ class InboxPilotCommandTest {
     void runsAnalysis() {
         assertThat(command().execute(ANALYZE_ARGUMENT))
                 .containsExactly("Analysis complete: 0 messages, 0 unclassified senders, "
-                        + "0 unclassified domains, 0 unused labels, 0 duplicate label groups");
+                        + "0 unclassified domains");
     }
 
     private InboxPilotCommand command() {
@@ -157,9 +157,8 @@ class InboxPilotCommandTest {
     }
 
     private AnalysisService analysisService(MessageSource source) {
-        return new AnalysisService(
-                source, stubGateway, Duration.ofDays(1), 10,
-                Clock.fixed(Instant.parse("2026-08-01T12:00:00Z"), ZoneOffset.UTC));
+        return new AnalysisService(() -> new dev.inboxpilot.domain.inventory.Inventory(
+                List.of(), List.of()));
     }
 
     private static InventoryService inventoryService(MessageSource source) {

@@ -124,11 +124,13 @@ visible name, while message discovery prints IDs only. Starting the application
 without a command performs no Gmail request, preserving the unconfigured
 development startup path.
 
-The read-only `analyze` command scans the configured window, aggregates message
-metadata, and evaluates unclassified senders/domains plus user-label structure.
-Its deterministic summary reports processed messages, unclassified entries,
-unused user labels, and duplicate user-label name groups. Gmail system labels
-are excluded and the workflow exposes no mutation port.
+The read-only `analyze` command consumes the configured local `inventory.json`
+artifact and never contacts Gmail or OAuth. It reconstructs the deterministic
+inventory contract, counts processed messages from exact-sender totals, and
+reports sender/domain entries carrying no observed user-label ID. A missing or
+malformed inventory fails with an instruction to run `inventory` first. Label
+name structure requires a future persisted label snapshot and is not fabricated
+from IDs alone.
 
 ## Persisted contracts
 

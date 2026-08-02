@@ -81,15 +81,15 @@ Generate the configured mailbox inventory reports:
 ./gradlew bootRun --args='inventory'
 ```
 
-Run read-only mailbox analysis over the configured scan window:
+Analyze the completed local inventory:
 
 ```bash
 ./gradlew bootRun --args='analyze'
 ```
 
-The summary reports processed messages, unclassified senders and domains,
-unused user labels, and duplicate user-label name groups. System Gmail labels
-are excluded from label-structure analysis, and the command never mutates mail.
+Run `inventory` first. The command reads `reports/inventory.json` locally and
+reports processed messages plus unclassified senders and domains. It performs
+no OAuth or Gmail request and never mutates mail.
 
 The command scans the configured lookback window up to `scanning.max-messages`,
 then prints the processed count and every generated report path.
