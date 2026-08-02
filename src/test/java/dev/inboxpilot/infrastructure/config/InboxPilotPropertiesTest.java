@@ -39,8 +39,18 @@ class InboxPilotPropertiesTest {
         assertThat(properties.batching()).isNotNull();
         assertThat(properties.reports()).isNotNull();
         assertThat(properties.checkpoints()).isNotNull();
+        assertThat(properties.ruleGeneration()).isNotNull();
         assertThat(properties.ai()).isNotNull();
         assertThat(properties.dashboard()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("binds safe starter-rule generation defaults")
+    void bindsRuleGenerationSafety() {
+        assertThat(properties.ruleGeneration().excludedDomains())
+                .contains("privaterelay.appleid.com");
+        assertThat(properties.ruleGeneration().knownDomainMappings())
+                .containsEntry("e-autopalyamatrica.hu", "Mobility/Tolls");
     }
 
     @Test

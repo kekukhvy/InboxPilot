@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 import dev.inboxpilot.application.model.MailboxLabel;
+import dev.inboxpilot.application.model.RuleFileSettings;
+import dev.inboxpilot.application.classification.ClassificationDryRunService;
 import dev.inboxpilot.application.inventory.InventoryService;
 import dev.inboxpilot.application.analysis.AnalysisService;
 import dev.inboxpilot.application.port.MailboxGateway;
@@ -20,6 +22,7 @@ import java.time.Duration;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
+import java.nio.file.Path;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -44,6 +47,8 @@ class InboxPilotCommandTest {
     private static final String CHECKPOINT_ARGUMENT = "checkpoint";
     private static final String INVENTORY_ARGUMENT = "inventory";
     private static final String ANALYZE_ARGUMENT = "analyze";
+    private static final String CLASSIFY_ARGUMENT = "classify";
+    private static final String DRY_RUN_ARGUMENT = "--dry-run";
     private static final String RESET_ARGUMENT = "reset";
     private static final String RESET_CONFIRMATION = "Checkpoint reset";
     private static final String USAGE_FRAGMENT = "labels list";
@@ -74,7 +79,9 @@ class InboxPilotCommandTest {
                         MailboxGateway.class,
                         CheckpointStore.class,
                         InventoryService.class,
-                        AnalysisService.class);
+                        AnalysisService.class,
+                        ClassificationDryRunService.class,
+                        RuleFileSettings.class);
     }
 
     @Test
@@ -90,7 +97,8 @@ class InboxPilotCommandTest {
 
         InboxPilotCommand command = new InboxPilotCommand(
                 inMemorySource, stubGateway, checkpointStore,
-                inventoryService(inMemorySource), analysisService(inMemorySource));
+                inventoryService(inMemorySource), analysisService(inMemorySource),
+                classificationService(inMemorySource), ruleFileSettings());
         command.reportConfiguredSource();
 
         assertThat(command.messageSource().fetchSince(Instant.EPOCH))
@@ -152,16 +160,49 @@ class InboxPilotCommandTest {
                         "Report: /tmp/summary.json");
     }
 
+    @Test
+    void runsClassificationOnlyAsAnExplicitDryRun() {
+        assertThat(command().execute(CLASSIFY_ARGUMENT, DRY_RUN_ARGUMENT))
+                .containsExactly(
+                        "Classification dry-run complete: 0 processed, 0 matched, 0 changes, 0 conflicts",
+                        "Report: /tmp/classification-dry-run-summary.json");
+    }
+
+    @Test
+    void rejectsClassificationWithoutDryRun() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> command().execute(CLASSIFY_ARGUMENT))
+                .withMessageContaining("--dry-run");
+    }
+
     private InboxPilotCommand command() {
         return new InboxPilotCommand(
                 stubSource, stubGateway, checkpointStore,
-                inventoryService(stubSource), analysisService(stubSource));
+                inventoryService(stubSource), analysisService(stubSource),
+                classificationService(stubSource), ruleFileSettings());
     }
 
     private AnalysisService analysisService(MessageSource source) {
         return new AnalysisService(() -> new dev.inboxpilot.domain.inventory.Inventory(
                 List.of(), List.of()), report -> List.of(
-                        java.nio.file.Path.of("/tmp/summary.json")), stubGateway);
+                        java.nio.file.Path.of("/tmp/summary.json")), stubGateway,
+                new dev.inboxpilot.domain.rules.RuleGenerationPolicy(
+                        java.util.Set.of(), java.util.Map.of(), java.util.Set.of(), 20));
+    }
+
+    private ClassificationDryRunService classificationService(MessageSource source) {
+        return new ClassificationDryRunService(
+                () -> new dev.inboxpilot.domain.inventory.Inventory(List.of(), List.of()),
+                ignored -> new dev.inboxpilot.domain.rules.RuleSet(1, List.of()),
+                source,
+                stubGateway,
+                report -> List.of(Path.of("/tmp/classification-dry-run-summary.json")),
+                new dev.inboxpilot.domain.rules.RuleGenerationPolicy(
+                        java.util.Set.of(), java.util.Map.of(), java.util.Set.of(), 20));
+    }
+
+    private static RuleFileSettings ruleFileSettings() {
+        return new RuleFileSettings(Path.of("/tmp/rules/approved-rules.yaml"));
     }
 
     private static InventoryService inventoryService(MessageSource source) {

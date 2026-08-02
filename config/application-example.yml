@@ -118,6 +118,18 @@ inboxpilot:
     # Messages processed between checkpoint writes; at least 1.
     interval: 500
 
+  # ---------------------------------------------------------------------------
+  # Safe starter-rule generation
+  # ---------------------------------------------------------------------------
+  rule-generation:
+    excluded-domains:
+      - privaterelay.appleid.com
+    known-domain-mappings:
+      e-autopalyamatrica.hu: Mobility/Tolls
+    sender-rule-allowlist: []
+    minimum-message-count: 20
+    approved-rules-file: ./rules/approved-rules.yaml
+
 # Optional: raise log detail for InboxPilot's own code.
 logging:
   level:

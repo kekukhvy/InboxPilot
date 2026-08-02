@@ -8,9 +8,7 @@ import java.util.List;
 /** Evaluates matching rules in deterministic priority order. */
 public final class RuleEvaluator {
 
-    private static final Comparator<RuleDefinition> EVALUATION_ORDER =
-            Comparator.comparingInt(RuleDefinition::priority).reversed()
-                    .thenComparing(rule -> rule.id().value());
+    private static final Comparator<RuleDefinition> EVALUATION_ORDER = RuleSpecificity.order();
     private final ConditionCompiler conditionCompiler = new ConditionCompiler();
 
     public RuleEvaluation evaluate(RuleSet ruleSet, MailMessage message) {

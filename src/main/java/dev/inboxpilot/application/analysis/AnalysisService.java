@@ -9,8 +9,11 @@ import dev.inboxpilot.domain.analysis.UnclassifiedInventoryAnalyzer;
 import dev.inboxpilot.domain.inventory.Inventory;
 import dev.inboxpilot.domain.inventory.InventoryStatistics;
 import dev.inboxpilot.domain.inventory.SenderInventory;
-import dev.inboxpilot.domain.rules.RuleSet;
+import dev.inboxpilot.domain.rules.RuleGenerationResult;
+import dev.inboxpilot.domain.rules.RuleGenerationPolicy;
 import dev.inboxpilot.domain.rules.StarterRuleGenerator;
+import dev.inboxpilot.domain.rules.GeneratedRuleValidator;
+import dev.inboxpilot.domain.rules.RuleValidationSeverity;
 import java.util.Objects;
 import java.util.Set;
 
@@ -25,18 +28,23 @@ public final class AnalysisService {
     private final InventorySnapshotStore inventoryStore;
     private final AnalysisReportStore reportStore;
     private final MailboxGateway mailboxGateway;
+    private final RuleGenerationPolicy ruleGenerationPolicy;
     private final UnclassifiedInventoryAnalyzer unclassifiedAnalyzer =
             new UnclassifiedInventoryAnalyzer();
 
     private final StarterRuleGenerator ruleGenerator = new StarterRuleGenerator();
+    private final GeneratedRuleValidator ruleValidator = new GeneratedRuleValidator();
 
     public AnalysisService(
             InventorySnapshotStore inventoryStore,
             AnalysisReportStore reportStore,
-            MailboxGateway mailboxGateway) {
+            MailboxGateway mailboxGateway,
+            RuleGenerationPolicy ruleGenerationPolicy) {
         this.inventoryStore = Objects.requireNonNull(inventoryStore, "inventoryStore");
         this.reportStore = Objects.requireNonNull(reportStore, "reportStore");
         this.mailboxGateway = Objects.requireNonNull(mailboxGateway, "mailboxGateway");
+        this.ruleGenerationPolicy = Objects.requireNonNull(
+                ruleGenerationPolicy, "ruleGenerationPolicy");
     }
 
     public AnalysisRunResult run() {
@@ -51,8 +59,14 @@ public final class AnalysisService {
                 .sum();
         AnalysisReport report = report(
                 inventory, labels, unclassified, processedMessages);
+        java.util.List<java.nio.file.Path> paths = reportStore.write(report);
+        if (report.ruleValidationFindings().stream()
+                .anyMatch(finding -> finding.severity() == RuleValidationSeverity.ERROR)) {
+            throw new RuleValidationFailureException(
+                    "Generated rules failed validation; see rule-validation-errors.csv");
+        }
         return new AnalysisRunResult(processedMessages, unclassified.senders().size(),
-                unclassified.domains().size(), reportStore.write(report));
+                unclassified.domains().size(), paths);
     }
 
     private static boolean isUserLabel(String labelId) {
@@ -64,14 +78,17 @@ public final class AnalysisService {
             MailboxLabelCatalog labels,
             UnclassifiedInventory unclassified,
             int processedMessages) {
-        RuleSet suggestions = ruleGenerator.generate(
-                inventory, labels.userLabelNamesById(), MINIMUM_REVIEW_MESSAGE_COUNT);
+        RuleGenerationResult suggestions = ruleGenerator.generate(
+                inventory, labels.userLabelNamesById(), ruleGenerationPolicy);
+        var validation = ruleValidator.validate(
+                suggestions.rules().rules(), ruleGenerationPolicy);
         return new AnalysisReport(
                 processedMessages,
                 displaySenders(unclassified.senders(), labels),
                 conflicts(inventory, labels),
                 cleanupCandidates(unclassified.senders()),
-                suggestions);
+                suggestions,
+                validation);
     }
 
     private static java.util.List<AnalysisLabelConflict> conflicts(

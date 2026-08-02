@@ -27,17 +27,24 @@ public final class AnalysisReportWriter implements AnalysisReportStore {
     private static final String CONFLICTS_FILE = "label-conflicts.csv";
     private static final String CLEANUP_FILE = "cleanup-candidates.csv";
     private static final String SUGGESTIONS_FILE = "rule-suggestions.yaml";
+    private static final String REJECTED_FILE = "rejected-rule-suggestions.csv";
+    private static final String VALIDATION_FILE = "rule-validation-errors.csv";
     private static final String WRITE_FAILURE = "Analysis reports could not be written: ";
     private static final String LINE_SEPARATOR = "\n";
     private static final String LIST_SEPARATOR = ";";
     private static final String SUMMARY_TEMPLATE =
             "{\"processedMessages\":%d,\"unlabeledSenders\":%d,"
                     + "\"labelConflicts\":%d,\"cleanupCandidates\":%d,"
-                    + "\"ruleSuggestions\":%d}\n";
+                    + "\"generatedRuleSuggestions\":%d,"
+                    + "\"deduplicatedRuleSuggestions\":%d,"
+                    + "\"rejectedRuleSuggestions\":%d,"
+                    + "\"finalRuleSuggestions\":%d}\n";
     private static final String UNLABELED_HEADER =
             "sender,domain,messageCount,unreadCount,currentLabels,sampleSubjects\n";
     private static final String CONFLICTS_HEADER = "sender,messageCount,labels\n";
     private static final String CLEANUP_HEADER = "sender,messageCount,unreadCount,reason\n";
+    private static final String REJECTED_HEADER = "sender,domain,messageCount,reason\n";
+    private static final String VALIDATION_HEADER = "ruleId,severity,errorCode,message\n";
 
     private final ReportProperties properties;
     private final RuleYamlRenderer yamlRenderer = new RuleYamlRenderer();
@@ -55,12 +62,20 @@ public final class AnalysisReportWriter implements AnalysisReportStore {
     public List<Path> write(AnalysisReport report) {
         try {
             Files.createDirectories(properties.outputDirectory());
-            return List.of(
+            List<Path> paths = new java.util.ArrayList<>(List.of(
                     write(SUMMARY_FILE, summary(report)),
                     write(UNLABELED_FILE, unlabeled(report)),
                     write(CONFLICTS_FILE, conflicts(report)),
                     write(CLEANUP_FILE, cleanup(report)),
-                    write(SUGGESTIONS_FILE, yamlRenderer.render(report.ruleSuggestions())));
+                    write(REJECTED_FILE, rejected(report)),
+                    write(VALIDATION_FILE, validation(report))));
+            if (report.ruleValidationFindings().isEmpty()) {
+                paths.add(write(SUGGESTIONS_FILE,
+                        yamlRenderer.render(report.ruleGeneration().rules())));
+            } else if (properties.overwrite()) {
+                Files.deleteIfExists(properties.outputDirectory().resolve(SUGGESTIONS_FILE));
+            }
+            return List.copyOf(paths);
         } catch (IOException exception) {
             throw new ReportWriteException(
                     WRITE_FAILURE + properties.outputDirectory(), exception);
@@ -71,7 +86,10 @@ public final class AnalysisReportWriter implements AnalysisReportStore {
         return SUMMARY_TEMPLATE.formatted(
                 report.processedMessages(), report.unlabeledSenders().size(),
                 report.labelConflicts().size(), report.cleanupCandidates().size(),
-                report.ruleSuggestions().rules().size());
+                report.ruleGeneration().generatedSuggestions(),
+                report.ruleGeneration().deduplicatedSuggestions(),
+                report.ruleGeneration().rejectedSuggestions().size(),
+                report.ruleGeneration().finalSuggestions());
     }
 
     private static String unlabeled(AnalysisReport report) {
@@ -112,6 +130,22 @@ public final class AnalysisReportWriter implements AnalysisReportStore {
     private static String cleanupRow(AnalysisCleanupCandidate candidate) {
         return row(candidate.sender().value(), Integer.toString(candidate.messageCount()),
                 Integer.toString(candidate.unreadCount()), candidate.reason());
+    }
+
+    private static String rejected(AnalysisReport report) {
+        var rejected = report.ruleGeneration().rejectedSuggestions();
+        return REJECTED_HEADER + String.join(LINE_SEPARATOR, rejected.stream()
+                .map(value -> row(value.sender(), value.domain(),
+                        Integer.toString(value.messageCount()), value.reason()))
+                .toList()) + trailingLine(rejected);
+    }
+
+    private static String validation(AnalysisReport report) {
+        var findings = report.ruleValidationFindings();
+        return VALIDATION_HEADER + String.join(LINE_SEPARATOR, findings.stream()
+                .map(value -> row(value.ruleId(), value.severity().name(),
+                        value.errorCode(), value.message()))
+                .toList()) + trailingLine(findings);
     }
 
     private Path write(String fileName, String content) throws IOException {

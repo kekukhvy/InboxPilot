@@ -97,6 +97,8 @@ reports/
 ├── unlabeled-senders.csv
 ├── label-conflicts.csv
 ├── cleanup-candidates.csv
+├── rejected-rule-suggestions.csv
+├── rule-validation-errors.csv
 └── rule-suggestions.yaml
 ```
 
@@ -108,6 +110,26 @@ IDs and cannot be executed as a cleanup plan. `rule-suggestions.yaml` contains
 deterministic starter rules for high-volume mappings to exactly one observed
 user label and must be reviewed before classification. Analysis CSV/YAML output
 contains visible names such as `Travel/Accommodation`, never `Label_*` IDs.
+Broad rules for `rule-generation.excluded-domains` are written to
+`rejected-rule-suggestions.csv` instead. Known logical mappings are configurable
+under `rule-generation.known-domain-mappings`. Suggestions are deduplicated and
+fully validated before YAML is written; validation errors are reported in
+`rule-validation-errors.csv` and make `analyze` exit unsuccessfully.
+
+The generated suggestions are review output, not production configuration.
+InboxPilot uses `rules/approved-rules.yaml` by default. To simulate the generated
+suggestions explicitly, run:
+
+```bash
+./gradlew bootRun --args='classify --dry-run --rules=reports/rule-suggestions.yaml'
+```
+
+The command writes `classification-dry-run-summary.json`,
+`classification-dry-run-changes.csv`, `classification-dry-run-conflicts.csv`,
+and `classification-dry-run-unmatched.csv` under `reports/`. It reads message
+metadata and computes label differences, but its application service has no
+label-mutation, archive, deletion, or checkpoint port. Classification without
+`--dry-run` is rejected; execute/apply mode is not implemented.
 During explicit classification execution, the current Gmail catalog must resolve
 each rule name back to exactly one stable ID; a missing or duplicate name blocks
 the mutation. Existing derived

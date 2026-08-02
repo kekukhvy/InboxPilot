@@ -3,6 +3,8 @@ package dev.inboxpilot.cli;
 import dev.inboxpilot.application.model.MailboxLabel;
 import dev.inboxpilot.application.analysis.AnalysisRunResult;
 import dev.inboxpilot.application.analysis.AnalysisService;
+import dev.inboxpilot.application.classification.ClassificationDryRunResult;
+import dev.inboxpilot.application.classification.ClassificationDryRunService;
 import dev.inboxpilot.application.inventory.InventoryRunResult;
 import dev.inboxpilot.application.inventory.InventoryService;
 import dev.inboxpilot.application.port.MailboxGateway;
@@ -11,6 +13,8 @@ import dev.inboxpilot.application.port.CheckpointStore;
 import dev.inboxpilot.domain.message.MessageId;
 import java.util.Arrays;
 import java.util.List;
+import java.nio.file.Path;
+import dev.inboxpilot.application.model.RuleFileSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
@@ -36,6 +40,11 @@ public class InboxPilotCommand implements ApplicationRunner {
     private static final String CHECKPOINT_COMMAND = "checkpoint";
     private static final String INVENTORY_COMMAND = "inventory";
     private static final String ANALYZE_COMMAND = "analyze";
+    private static final String CLASSIFY_COMMAND = "classify";
+    private static final String DRY_RUN_OPTION = "--dry-run";
+    private static final String RULES_OPTION_PREFIX = "--rules=";
+    private static final String CLASSIFICATION_SUMMARY =
+            "Classification dry-run complete: %d processed, %d matched, %d changes, %d conflicts";
     private static final String INVENTORY_SUMMARY = "Inventory complete: %d messages";
     private static final String ANALYSIS_SUMMARY =
             "Analysis complete: %d messages, %d unclassified senders, "
@@ -51,7 +60,7 @@ public class InboxPilotCommand implements ApplicationRunner {
     private static final String READY_TEMPLATE = "InboxPilot CLI ready, reading messages via {}";
     private static final String USAGE =
             "Usage: inventory | analyze | labels list | messages list --query=<gmail-query> "
-                    + "| checkpoint reset";
+                    + "| classify --dry-run [--rules=<path>] | checkpoint reset";
     private static final int COMMAND_INDEX = 0;
     private static final int ACTION_INDEX = 1;
     private static final int REQUIRED_COMMAND_PARTS = 2;
@@ -63,6 +72,8 @@ public class InboxPilotCommand implements ApplicationRunner {
     private final CheckpointStore checkpointStore;
     private final InventoryService inventoryService;
     private final AnalysisService analysisService;
+    private final ClassificationDryRunService classificationDryRunService;
+    private final Path approvedRulesFile;
 
     /**
      * @param messageSource  the port used to retrieve complete messages
@@ -73,12 +84,16 @@ public class InboxPilotCommand implements ApplicationRunner {
             MailboxGateway mailboxGateway,
             CheckpointStore checkpointStore,
             InventoryService inventoryService,
-            AnalysisService analysisService) {
+            AnalysisService analysisService,
+            ClassificationDryRunService classificationDryRunService,
+            RuleFileSettings ruleFileSettings) {
         this.messageSource = messageSource;
         this.mailboxGateway = mailboxGateway;
         this.checkpointStore = checkpointStore;
         this.inventoryService = inventoryService;
         this.analysisService = analysisService;
+        this.classificationDryRunService = classificationDryRunService;
+        this.approvedRulesFile = ruleFileSettings.approvedRulesFile();
     }
 
     /**
@@ -125,6 +140,12 @@ public class InboxPilotCommand implements ApplicationRunner {
         if (commandParts.equals(List.of(ANALYZE_COMMAND))) {
             return renderAnalysis(analysisService.run());
         }
+        if (commandParts.equals(List.of(CLASSIFY_COMMAND))) {
+            requireDryRun(arguments);
+            Path rulesPath = option(arguments, RULES_OPTION_PREFIX)
+                    .map(Path::of).orElse(approvedRulesFile);
+            return renderClassification(classificationDryRunService.run(rulesPath));
+        }
         if (isCommand(commandParts, MESSAGES_COMMAND)) {
             return mailboxGateway.listMessageIds(requireQuery(arguments)).stream()
                     .map(MessageId::value)
@@ -162,6 +183,21 @@ public class InboxPilotCommand implements ApplicationRunner {
                 .orElseThrow(() -> new IllegalArgumentException(USAGE));
     }
 
+    private static void requireDryRun(String[] arguments) {
+        if (Arrays.stream(arguments).noneMatch(DRY_RUN_OPTION::equals)) {
+            throw new IllegalArgumentException(
+                    "Classification execution is not implemented; --dry-run is required");
+        }
+    }
+
+    private static java.util.Optional<String> option(String[] arguments, String prefix) {
+        return Arrays.stream(arguments)
+                .filter(argument -> argument.startsWith(prefix))
+                .map(argument -> argument.substring(prefix.length()))
+                .filter(value -> !value.isBlank())
+                .findFirst();
+    }
+
     private static String renderLabel(MailboxLabel label) {
         return label.id() + LABEL_SEPARATOR + label.name();
     }
@@ -184,6 +220,17 @@ public class InboxPilotCommand implements ApplicationRunner {
                 result.unclassifiedDomains()));
         result.reports().stream()
                 .map(path -> REPORT_PREFIX + path.toAbsolutePath())
+                .forEach(output::add);
+        return List.copyOf(output);
+    }
+
+    private static List<String> renderClassification(ClassificationDryRunResult result) {
+        var summary = result.summary();
+        java.util.ArrayList<String> output = new java.util.ArrayList<>();
+        output.add(CLASSIFICATION_SUMMARY.formatted(
+                summary.processedMessages(), summary.matchedMessages(),
+                summary.messagesWithProposedChanges(), summary.ruleConflicts()));
+        result.reports().stream().map(path -> REPORT_PREFIX + path.toAbsolutePath())
                 .forEach(output::add);
         return List.copyOf(output);
     }

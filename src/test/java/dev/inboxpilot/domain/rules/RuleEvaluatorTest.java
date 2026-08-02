@@ -34,6 +34,52 @@ class RuleEvaluatorTest {
         assertThat(evaluation.stopped()).isTrue();
     }
 
+    @Test
+    void ordersExactSenderBeforeRootDomainAtEqualPriority() {
+        int priority = 100;
+        RuleDefinition domain = rule("domain", priority, RuleConflictBehavior.CONTINUE);
+        RuleDefinition sender = new RuleDefinition(
+                new RuleId("sender"), priority,
+                new RuleConditionSpec(
+                        "sender-exact", Map.of("value", "sender@example.com"), List.of()),
+                List.of(new RuleActionSpec("add-label", Map.of("label", "Specific"))),
+                RuleConflictBehavior.CONTINUE,
+                new RuleMetadata("Specific sender", "test", List.of()));
+
+        RuleEvaluation evaluation = new RuleEvaluator().evaluate(
+                new RuleSet(RuleSet.CURRENT_VERSION, List.of(domain, sender)), MESSAGE);
+
+        assertThat(evaluation.matches()).extracting(match -> match.id().value())
+                .containsExactly("sender", "domain");
+    }
+
+    @Test
+    void ordersSenderWithSubjectBeforePlainExactSender() {
+        int priority = 100;
+        RuleDefinition exact = new RuleDefinition(
+                new RuleId("exact"), priority,
+                new RuleConditionSpec(
+                        "sender-exact", Map.of("value", "sender@example.com"), List.of()),
+                List.of(new RuleActionSpec("add-label", Map.of("label", "Exact"))),
+                RuleConflictBehavior.CONTINUE,
+                new RuleMetadata("Exact sender", "test", List.of()));
+        RuleDefinition composite = new RuleDefinition(
+                new RuleId("composite"), priority,
+                new RuleConditionSpec("all", Map.of(), List.of(
+                        exact.condition(),
+                        new RuleConditionSpec(
+                                "subject-contains", Map.of("value", "Digest"), List.of()))),
+                List.of(new RuleActionSpec("add-label", Map.of("label", "Specific"))),
+                RuleConflictBehavior.CONTINUE,
+                new RuleMetadata("Sender and subject", "test", List.of()));
+
+        RuleEvaluation evaluation = new RuleEvaluator().evaluate(
+                new RuleSet(RuleSet.CURRENT_VERSION, List.of(exact, composite)), MESSAGE);
+
+        assertThat(evaluation.matches()).extracting(match -> match.id().value())
+                .containsExactly("composite", "exact");
+    }
+
     private static RuleDefinition rule(String id, int priority, RuleConflictBehavior behavior) {
         return new RuleDefinition(
                 new RuleId(id), priority,

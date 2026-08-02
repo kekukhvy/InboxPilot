@@ -13,12 +13,15 @@ import dev.inboxpilot.infrastructure.config.InboxPilotProperties;
 import dev.inboxpilot.infrastructure.config.OAuthProperties;
 import dev.inboxpilot.infrastructure.config.ReportFormat;
 import dev.inboxpilot.infrastructure.config.ReportProperties;
+import dev.inboxpilot.infrastructure.config.RuleGenerationProperties;
 import dev.inboxpilot.infrastructure.config.ScanningProperties;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -96,6 +99,9 @@ class GoogleCredentialProviderTest {
                 new BatchingProperties(BATCH_SIZE, MAX_RETRIES, BACKOFF, BACKOFF),
                 new ReportProperties(tempDir.resolve("reports"), List.of(ReportFormat.JSON), false),
                 new CheckpointProperties(false, tempDir.resolve("checkpoint.json"), CHECKPOINT_INTERVAL),
+                new RuleGenerationProperties(
+                        Set.of(), Map.of(), Set.of(), 20,
+                        tempDir.resolve("rules/approved-rules.yaml")),
                 new AiProperties(false, false, false, 0.9),
                 new DashboardProperties(false, tempDir.resolve("rules.yaml"), 1_024));
     }
