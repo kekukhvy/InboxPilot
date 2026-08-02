@@ -125,12 +125,14 @@ without a command performs no Gmail request, preserving the unconfigured
 development startup path.
 
 The read-only `analyze` command consumes the configured local `inventory.json`
-artifact and never contacts Gmail or OAuth. It reconstructs the deterministic
-inventory contract, counts processed messages from exact-sender totals, and
-reports sender/domain entries carrying no observed user-label ID. A missing or
-malformed inventory fails with an instruction to run `inventory` first. Label
-name structure requires a future persisted label snapshot and is not fabricated
-from IDs alone.
+artifact and performs one Gmail label-list request, never a second message
+metadata scan. It builds a catalog from stable Gmail IDs to visible names,
+reconstructs the deterministic inventory contract, counts processed messages
+from exact-sender totals, and reports sender/domain entries carrying no observed
+user-label ID. A missing or malformed inventory fails with an instruction to
+run `inventory` first. An inventory label ID absent from the current catalog is
+reported as an incompatibility rather than exposed or assigned a fabricated
+name.
 
 Local analysis writes five deterministic review artifacts in the configured
 report directory: `summary.json`, `unlabeled-senders.csv`,
@@ -139,7 +141,10 @@ Potential label conflicts are exact senders carrying at least two observed user
 label IDs. Cleanup candidates are high-volume unlabeled sender aggregates and
 contain counts and evidence, never invented message IDs or an executable
 operation. Starter rules are generated only for high-volume sender/domain
-mappings with exactly one observed user label. All derived files obey the
+mappings with exactly one observed user label. Every analysis artifact and rule
+action uses the visible label name. Stable `Label_*` IDs are provider details;
+explicit execution resolves each name against the current Gmail catalog and
+rejects missing or duplicate names before mutation. All derived files obey the
 configured overwrite policy.
 
 ## Persisted contracts

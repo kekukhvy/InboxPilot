@@ -161,7 +161,7 @@ class InboxPilotCommandTest {
     private AnalysisService analysisService(MessageSource source) {
         return new AnalysisService(() -> new dev.inboxpilot.domain.inventory.Inventory(
                 List.of(), List.of()), report -> List.of(
-                        java.nio.file.Path.of("/tmp/summary.json")));
+                        java.nio.file.Path.of("/tmp/summary.json")), stubGateway);
     }
 
     private static InventoryService inventoryService(MessageSource source) {
