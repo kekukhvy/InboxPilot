@@ -88,7 +88,8 @@ Analyze the completed local inventory:
 ```
 
 Run `inventory` first. The command reads `reports/inventory.json` locally and
-performs no OAuth or Gmail request. It creates:
+performs one Gmail label-list request to map stable IDs to visible names; it
+does not rescan message metadata. It creates:
 
 ```text
 reports/
@@ -105,7 +106,11 @@ reports/
 because inventory is aggregated, it deliberately contains no invented message
 IDs and cannot be executed as a cleanup plan. `rule-suggestions.yaml` contains
 deterministic starter rules for high-volume mappings to exactly one observed
-user-label ID and must be reviewed before classification. Existing derived
+user label and must be reviewed before classification. Analysis CSV/YAML output
+contains visible names such as `Travel/Accommodation`, never `Label_*` IDs.
+During explicit classification execution, the current Gmail catalog must resolve
+each rule name back to exactly one stable ID; a missing or duplicate name blocks
+the mutation. Existing derived
 reports follow `inboxpilot.reports.overwrite`.
 
 The command scans the configured lookback window up to `scanning.max-messages`,

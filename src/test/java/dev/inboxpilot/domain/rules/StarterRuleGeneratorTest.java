@@ -9,7 +9,7 @@ import dev.inboxpilot.domain.inventory.SenderInventory;
 import dev.inboxpilot.domain.message.EmailAddress;
 import java.time.Instant;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -18,6 +18,8 @@ class StarterRuleGeneratorTest {
 
     private static final String NEWSLETTER = "Label_News";
     private static final String OTHER = "Label_Other";
+    private static final String NEWSLETTER_NAME = "Newsletters";
+    private static final String OTHER_NAME = "Other";
 
     @Test
     @DisplayName("generates deterministic rules only for high-confidence mappings")
@@ -29,13 +31,15 @@ class StarterRuleGeneratorTest {
                 List.of(new DomainInventory("vendor.example", stats(50, NEWSLETTER))));
 
         RuleSet rules = new StarterRuleGenerator()
-                .generate(inventory, Set.of(NEWSLETTER, OTHER), 20);
+                .generate(inventory, Map.of(
+                        NEWSLETTER, NEWSLETTER_NAME, OTHER, OTHER_NAME), 20);
 
         assertThat(rules.rules()).hasSize(2);
         assertThat(rules.rules()).extracting(rule -> rule.condition().operator())
                 .containsExactly("sender-domain", "sender-exact");
         assertThat(rules.rules()).allSatisfy(rule -> {
-            assertThat(rule.actions().getFirst().parameters()).containsEntry("label", NEWSLETTER);
+            assertThat(rule.actions().getFirst().parameters())
+                    .containsEntry("label", NEWSLETTER_NAME);
             assertThat(rule.metadata().source()).isEqualTo("inventory");
             assertThat(rule.tests()).hasSize(1);
         });

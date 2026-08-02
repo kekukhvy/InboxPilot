@@ -2,6 +2,8 @@ package dev.inboxpilot.application.analysis;
 
 import dev.inboxpilot.application.port.InventorySnapshotStore;
 import dev.inboxpilot.application.port.AnalysisReportStore;
+import dev.inboxpilot.application.port.MailboxGateway;
+import dev.inboxpilot.application.model.MailboxLabelCatalog;
 import dev.inboxpilot.domain.analysis.UnclassifiedInventory;
 import dev.inboxpilot.domain.analysis.UnclassifiedInventoryAnalyzer;
 import dev.inboxpilot.domain.inventory.Inventory;
@@ -9,10 +11,8 @@ import dev.inboxpilot.domain.inventory.InventoryStatistics;
 import dev.inboxpilot.domain.inventory.SenderInventory;
 import dev.inboxpilot.domain.rules.RuleSet;
 import dev.inboxpilot.domain.rules.StarterRuleGenerator;
-import java.util.Collection;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /** Orchestrates deterministic, read-only mailbox analysis. */
 public final class AnalysisService {
@@ -24,24 +24,25 @@ public final class AnalysisService {
 
     private final InventorySnapshotStore inventoryStore;
     private final AnalysisReportStore reportStore;
+    private final MailboxGateway mailboxGateway;
     private final UnclassifiedInventoryAnalyzer unclassifiedAnalyzer =
             new UnclassifiedInventoryAnalyzer();
 
     private final StarterRuleGenerator ruleGenerator = new StarterRuleGenerator();
 
     public AnalysisService(
-            InventorySnapshotStore inventoryStore, AnalysisReportStore reportStore) {
+            InventorySnapshotStore inventoryStore,
+            AnalysisReportStore reportStore,
+            MailboxGateway mailboxGateway) {
         this.inventoryStore = Objects.requireNonNull(inventoryStore, "inventoryStore");
         this.reportStore = Objects.requireNonNull(reportStore, "reportStore");
+        this.mailboxGateway = Objects.requireNonNull(mailboxGateway, "mailboxGateway");
     }
 
     public AnalysisRunResult run() {
         Inventory inventory = inventoryStore.load();
-        Set<String> userLabelIds = inventory.senders().stream()
-                .map(sender -> sender.statistics().currentLabels())
-                .flatMap(Collection::stream)
-                .filter(AnalysisService::isUserLabel)
-                .collect(Collectors.toUnmodifiableSet());
+        MailboxLabelCatalog labels = new MailboxLabelCatalog(mailboxGateway.listLabels());
+        Set<String> userLabelIds = labels.userLabelNamesById().keySet();
         UnclassifiedInventory unclassified = unclassifiedAnalyzer.analyze(
                 inventory, userLabelIds);
         int processedMessages = inventory.senders().stream()
@@ -49,7 +50,7 @@ public final class AnalysisService {
                 .mapToInt(InventoryStatistics::messageCount)
                 .sum();
         AnalysisReport report = report(
-                inventory, userLabelIds, unclassified, processedMessages);
+                inventory, labels, unclassified, processedMessages);
         return new AnalysisRunResult(processedMessages, unclassified.senders().size(),
                 unclassified.domains().size(), reportStore.write(report));
     }
@@ -60,29 +61,32 @@ public final class AnalysisService {
 
     private AnalysisReport report(
             Inventory inventory,
-            Set<String> userLabelIds,
+            MailboxLabelCatalog labels,
             UnclassifiedInventory unclassified,
             int processedMessages) {
         RuleSet suggestions = ruleGenerator.generate(
-                inventory, userLabelIds, MINIMUM_REVIEW_MESSAGE_COUNT);
+                inventory, labels.userLabelNamesById(), MINIMUM_REVIEW_MESSAGE_COUNT);
         return new AnalysisReport(
                 processedMessages,
-                unclassified.senders(),
-                conflicts(inventory),
+                displaySenders(unclassified.senders(), labels),
+                conflicts(inventory, labels),
                 cleanupCandidates(unclassified.senders()),
                 suggestions);
     }
 
-    private static java.util.List<AnalysisLabelConflict> conflicts(Inventory inventory) {
+    private static java.util.List<AnalysisLabelConflict> conflicts(
+            Inventory inventory, MailboxLabelCatalog labels) {
         return inventory.senders().stream()
-                .map(AnalysisService::conflict)
+                .map(sender -> conflict(sender, labels))
                 .flatMap(java.util.Optional::stream)
                 .toList();
     }
 
-    private static java.util.Optional<AnalysisLabelConflict> conflict(SenderInventory sender) {
+    private static java.util.Optional<AnalysisLabelConflict> conflict(
+            SenderInventory sender, MailboxLabelCatalog catalog) {
         java.util.List<String> labels = sender.statistics().currentLabels().stream()
                 .filter(AnalysisService::isUserLabel)
+                .map(catalog::nameForId)
                 .sorted()
                 .toList();
         if (labels.size() < MINIMUM_CONFLICTING_LABELS) {
@@ -90,6 +94,26 @@ public final class AnalysisService {
         }
         return java.util.Optional.of(new AnalysisLabelConflict(
                 sender.sender(), labels, sender.statistics().messageCount()));
+    }
+
+    private static java.util.List<SenderInventory> displaySenders(
+            java.util.List<SenderInventory> senders, MailboxLabelCatalog labels) {
+        return senders.stream()
+                .map(sender -> new SenderInventory(
+                        sender.sender(), displayStatistics(sender.statistics(), labels)))
+                .toList();
+    }
+
+    private static InventoryStatistics displayStatistics(
+            InventoryStatistics statistics, MailboxLabelCatalog labels) {
+        java.util.List<String> names = statistics.currentLabels().stream()
+                .map(labels::nameForId)
+                .sorted()
+                .toList();
+        return new InventoryStatistics(
+                statistics.messageCount(), statistics.unreadCount(),
+                statistics.firstReceivedAt(), statistics.lastReceivedAt(),
+                names, statistics.sampleSubjects());
     }
 
     private static java.util.List<AnalysisCleanupCandidate> cleanupCandidates(
