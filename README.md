@@ -133,7 +133,10 @@ label-mutation, archive, deletion, or checkpoint port. Classification without
 During explicit classification execution, the current Gmail catalog must resolve
 each rule name back to exactly one stable ID; a missing or duplicate name blocks
 the mutation. Existing derived
-reports follow `inboxpilot.reports.overwrite`.
+reports are reproducible derivatives of `inventory.json`, so every `analyze`
+run stages and safely replaces only this known artifact set. The inventory
+snapshot and unrelated reports are preserved. Inventory report replacement
+continues to follow `inboxpilot.reports.overwrite`.
 
 The command scans the configured lookback window up to `scanning.max-messages`,
 then prints the processed count and every generated report path.

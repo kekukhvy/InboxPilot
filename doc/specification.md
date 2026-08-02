@@ -146,8 +146,11 @@ operation. Starter rules are generated only for high-volume sender/domain
 mappings with exactly one observed user label. Every analysis artifact and rule
 action uses the visible label name. Stable `Label_*` IDs are provider details;
 explicit execution resolves each name against the current Gmail catalog and
-rejects missing or duplicate names before mutation. All derived files obey the
-configured overwrite policy.
+rejects missing or duplicate names before mutation. Analysis artifacts are
+reproducible derivatives: a repeated run stages the complete set, replaces only
+the known analysis files, and rolls back the previous set if installation
+fails. Inventory snapshots and unrelated reports remain untouched. Inventory
+report replacement continues to obey the configured overwrite policy.
 
 Domain suggestions respect a configurable exclusion list. Excluded broad
 domains are retained only as rejected evidence, while exact-sender suggestions
