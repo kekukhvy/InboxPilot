@@ -2,15 +2,12 @@ package dev.inboxpilot.application.classification;
 
 import dev.inboxpilot.application.model.MailboxLabelCatalog;
 import dev.inboxpilot.application.port.ClassificationDryRunReportStore;
-import dev.inboxpilot.application.port.InventorySnapshotStore;
 import dev.inboxpilot.application.port.MailboxGateway;
-import dev.inboxpilot.application.port.MessageSource;
+import dev.inboxpilot.application.port.MessageSnapshotStore;
 import dev.inboxpilot.application.port.RuleSetStore;
 import dev.inboxpilot.domain.classification.ClassificationDryRun;
 import dev.inboxpilot.domain.classification.ClassificationPlan;
 import dev.inboxpilot.domain.classification.MessageLabelPlan;
-import dev.inboxpilot.domain.inventory.Inventory;
-import dev.inboxpilot.domain.inventory.InventoryStatistics;
 import dev.inboxpilot.domain.message.MailMessage;
 import dev.inboxpilot.domain.rules.RuleActionSpec;
 import dev.inboxpilot.domain.rules.RuleDefinition;
@@ -19,7 +16,6 @@ import dev.inboxpilot.domain.rules.RuleGenerationPolicy;
 import dev.inboxpilot.domain.rules.RuleId;
 import dev.inboxpilot.domain.rules.RuleSet;
 import java.nio.file.Path;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -27,15 +23,21 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/** Runs classification against read-only metadata and exposes no mutation port. */
+/**
+ * Runs classification against read-only metadata and exposes no mutation port.
+ *
+ * <p>Messages come from the snapshot inventory persisted locally, never from the
+ * mailbox: the service holds no {@code MessageSource}, so a dry run cannot
+ * silently turn into a mailbox-wide rescan (issue #151). Only the label catalog
+ * is read live, so report label names match the mailbox as it is now.
+ */
 public final class ClassificationDryRunService {
 
     private static final String CONFLICT_REASON = "incompatible-label-actions";
     private static final String NO_REASON = "";
 
-    private final InventorySnapshotStore inventoryStore;
+    private final MessageSnapshotStore snapshotStore;
     private final RuleSetStore ruleStore;
-    private final MessageSource messageSource;
     private final MailboxGateway mailboxGateway;
     private final ClassificationDryRunReportStore reportStore;
     private final RuleGenerationPolicy rulePolicy;
@@ -43,26 +45,23 @@ public final class ClassificationDryRunService {
     private final GeneratedRuleValidator validator = new GeneratedRuleValidator();
 
     public ClassificationDryRunService(
-            InventorySnapshotStore inventoryStore,
+            MessageSnapshotStore snapshotStore,
             RuleSetStore ruleStore,
-            MessageSource messageSource,
             MailboxGateway mailboxGateway,
             ClassificationDryRunReportStore reportStore,
             RuleGenerationPolicy rulePolicy) {
-        this.inventoryStore = inventoryStore;
+        this.snapshotStore = snapshotStore;
         this.ruleStore = ruleStore;
-        this.messageSource = messageSource;
         this.mailboxGateway = mailboxGateway;
         this.reportStore = reportStore;
         this.rulePolicy = rulePolicy;
     }
 
     public ClassificationDryRunResult run(Path rulesPath) {
-        Inventory inventory = inventoryStore.load();
         RuleSet rules = ruleStore.load(rulesPath);
         validate(rules);
         MailboxLabelCatalog labels = new MailboxLabelCatalog(mailboxGateway.listLabels());
-        List<MailMessage> messages = displayMessages(fetchMessages(inventory), labels);
+        List<MailMessage> messages = displayMessages(snapshotStore.load(), labels);
         ClassificationPlan plan = planner.plan(rules, messages);
         ClassificationDryRunReport report = report(rules, messages, plan);
         return new ClassificationDryRunResult(report.summary(), reportStore.write(report));
@@ -73,19 +72,6 @@ public final class ClassificationDryRunService {
         if (!findings.isEmpty()) {
             throw new ClassificationRuleValidationException(findings);
         }
-    }
-
-    private List<MailMessage> fetchMessages(Inventory inventory) {
-        Instant since = inventory.senders().stream()
-                .map(sender -> sender.statistics())
-                .map(InventoryStatistics::firstReceivedAt)
-                .min(Instant::compareTo)
-                .orElse(Instant.EPOCH);
-        int maximum = inventory.senders().stream()
-                .map(sender -> sender.statistics())
-                .mapToInt(InventoryStatistics::messageCount)
-                .sum();
-        return messageSource.fetchSince(since, maximum);
     }
 
     private static List<MailMessage> displayMessages(

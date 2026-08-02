@@ -5,9 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.inboxpilot.application.model.MailboxLabel;
 import dev.inboxpilot.application.port.MailboxGateway;
-import dev.inboxpilot.domain.inventory.Inventory;
-import dev.inboxpilot.domain.inventory.InventoryStatistics;
-import dev.inboxpilot.domain.inventory.SenderInventory;
+import dev.inboxpilot.application.port.MessageSnapshotStore;
+import dev.inboxpilot.application.port.MessageSnapshotStoreException;
+import dev.inboxpilot.application.port.MessageSource;
 import dev.inboxpilot.domain.message.EmailAddress;
 import dev.inboxpilot.domain.message.MailMessage;
 import dev.inboxpilot.domain.message.MessageId;
@@ -86,9 +86,68 @@ class ClassificationDryRunServiceTest {
                         || type.getSimpleName().contains("Archive"));
     }
 
+    @Test
+    void constructorCannotTriggerAMailboxRescan() {
+        assertThat(ClassificationDryRunService.class.getDeclaredConstructors()[0]
+                .getParameterTypes())
+                .doesNotContain(MessageSource.class);
+    }
+
+    @Test
+    void readsMessagesFromTheSnapshotWithoutFetchingThem() {
+        CountingSnapshotStore snapshot = new CountingSnapshotStore(message(List.of()));
+
+        ClassificationDryRunReport report = run(
+                List.of(rule("google", "sender-domain", "google.com", LABEL_NAME)), snapshot);
+
+        assertThat(report.summary().processedMessages()).isOne();
+        assertThat(snapshot.loadCount).isOne();
+    }
+
+    @Test
+    void repeatedRunsAgainstAnUnchangedSnapshotProduceIdenticalReports() {
+        CountingSnapshotStore snapshot = new CountingSnapshotStore(message(List.of()));
+        List<RuleDefinition> rules =
+                List.of(rule("google", "sender-domain", "google.com", LABEL_NAME));
+
+        ClassificationDryRunReport first = run(rules, snapshot);
+        ClassificationDryRunReport second = run(rules, snapshot);
+
+        assertThat(second.summary()).isEqualTo(first.summary());
+        assertThat(second.changes()).isEqualTo(first.changes());
+    }
+
+    @Test
+    void missingSnapshotFailsWithAnActionableMigrationInstruction() {
+        MessageSnapshotStore missing = new MessageSnapshotStore() {
+            @Override
+            public void write(List<MailMessage> messages) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public List<MailMessage> load() {
+                throw new MessageSnapshotStoreException(
+                        "Message snapshot is missing; rerun: inventory");
+            }
+        };
+        ClassificationDryRunService service = service(
+                List.of(rule("google", "sender-domain", "google.com", LABEL_NAME)),
+                missing, new CountingGateway(), ignored -> { });
+
+        assertThatThrownBy(() -> service.run(RULES_PATH))
+                .isInstanceOf(MessageSnapshotStoreException.class)
+                .hasMessageContaining("inventory");
+    }
+
     private ClassificationDryRunReport run(List<RuleDefinition> rules, MailMessage message) {
+        return run(rules, new CountingSnapshotStore(message));
+    }
+
+    private ClassificationDryRunReport run(
+            List<RuleDefinition> rules, MessageSnapshotStore snapshot) {
         ClassificationDryRunReport[] captured = new ClassificationDryRunReport[1];
-        service(rules, message, new CountingGateway(), report -> captured[0] = report)
+        service(rules, snapshot, new CountingGateway(), report -> captured[0] = report)
                 .run(RULES_PATH);
         return captured[0];
     }
@@ -98,13 +157,17 @@ class ClassificationDryRunServiceTest {
             MailMessage message,
             CountingGateway gateway,
             java.util.function.Consumer<ClassificationDryRunReport> capture) {
-        Inventory inventory = new Inventory(
-                List.of(new SenderInventory(message.sender(), new InventoryStatistics(
-                        1, 0, RECEIVED_AT, RECEIVED_AT, List.of(), List.of()))), List.of());
+        return service(rules, new CountingSnapshotStore(message), gateway, capture);
+    }
+
+    private ClassificationDryRunService service(
+            List<RuleDefinition> rules,
+            MessageSnapshotStore snapshot,
+            CountingGateway gateway,
+            java.util.function.Consumer<ClassificationDryRunReport> capture) {
         return new ClassificationDryRunService(
-                () -> inventory,
+                snapshot,
                 ignored -> new RuleSet(RuleSet.CURRENT_VERSION, rules),
-                ignored -> List.of(message),
                 gateway,
                 report -> {
                     capture.accept(report);
@@ -126,6 +189,27 @@ class ClassificationDryRunServiceTest {
                 List.of(new RuleActionSpec("add-label", Map.of("label", label))),
                 RuleConflictBehavior.CONTINUE,
                 new RuleMetadata("Test rule", "test", List.of()));
+    }
+
+    /** Snapshot fixture that records how often the persisted messages are read. */
+    private static final class CountingSnapshotStore implements MessageSnapshotStore {
+        private final List<MailMessage> messages;
+        private int loadCount;
+
+        private CountingSnapshotStore(MailMessage message) {
+            this.messages = List.of(message);
+        }
+
+        @Override
+        public void write(List<MailMessage> written) {
+            throw new UnsupportedOperationException("dry-run must not write the snapshot");
+        }
+
+        @Override
+        public List<MailMessage> load() {
+            loadCount++;
+            return messages;
+        }
     }
 
     private static final class CountingGateway implements MailboxGateway {

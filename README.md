@@ -126,10 +126,20 @@ suggestions explicitly, run:
 
 The command writes `classification-dry-run-summary.json`,
 `classification-dry-run-changes.csv`, `classification-dry-run-conflicts.csv`,
-and `classification-dry-run-unmatched.csv` under `reports/`. It reads message
-metadata and computes label differences, but its application service has no
-label-mutation, archive, deletion, or checkpoint port. Classification without
-`--dry-run` is rejected; execute/apply mode is not implemented.
+and `classification-dry-run-unmatched.csv` under `reports/`. It computes label
+differences, but its application service has no label-mutation, archive,
+deletion, or checkpoint port. Classification without `--dry-run` is rejected;
+execute/apply mode is not implemented.
+
+Run `inventory` first. Messages come from the local `reports/messages.json`
+snapshot, never from the mailbox: `classify --dry-run` never issues a Gmail
+message-list or message-get request, so repeated runs against an unchanged
+snapshot are free and produce identical reports. The only mailbox request is one
+label-list call that maps stable IDs to visible names. If the snapshot is
+missing or was written by an unsupported format version — for example when
+`reports/` only holds an aggregate-only `inventory.json` from an earlier release
+— the command fails immediately and tells you to rerun `inventory`; it never
+falls back to scanning mail.
 During explicit classification execution, the current Gmail catalog must resolve
 each rule name back to exactly one stable ID; a missing or duplicate name blocks
 the mutation. Existing derived
@@ -175,6 +185,16 @@ when the scan configuration fingerprint matches the saved checkpoint.
 Inventory reports are written as deterministic `inventory.csv` and
 `inventory.json` files in `inboxpilot.reports.output-directory`. Existing files
 are replaced only when `inboxpilot.reports.overwrite=true`.
+
+Inventory also writes a versioned message snapshot to `messages.json` in the
+same directory. `inventory.csv`/`inventory.json` keep sender and domain
+aggregates for `analyze`; the snapshot keeps the per-message data classification
+reports need — message ID, sender, subject, received timestamp, and label IDs.
+It is replaced atomically after every completed batch, so an interrupted scan
+keeps the batches that already finished, and it is always rewritten when a
+run completes so it matches the aggregates just reported. Unlike the inventory
+reports, the snapshot is a working artifact rather than a report format and is
+replaced regardless of `inboxpilot.reports.overwrite`.
 
 While an inventory scan runs, INFO logs report processed and remaining messages,
 retries, messages per second, elapsed time, and ETA. ETA remains `unknown` until

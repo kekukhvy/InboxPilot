@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import dev.inboxpilot.application.model.ScanCheckpoint;
 import dev.inboxpilot.application.port.CheckpointStore;
 import dev.inboxpilot.application.port.InventoryReportStore;
+import dev.inboxpilot.application.port.MessageSnapshotStore;
 import dev.inboxpilot.application.port.MessageSource;
 import dev.inboxpilot.domain.inventory.Inventory;
 import dev.inboxpilot.domain.message.EmailAddress;
@@ -36,7 +37,8 @@ class InventoryServiceTest {
                 message(FIRST_ID), message(SECOND_ID), message("three")));
         CapturingReports reports = new CapturingReports();
         InventoryService service = new InventoryService(
-                source, reports, new CapturingCheckpointStore(), true,
+                source, reports, new CapturingSnapshotStore(),
+                new CapturingCheckpointStore(), true,
                 LOOKBACK, MAXIMUM_MESSAGES, Clock.fixed(NOW, ZoneOffset.UTC));
 
         InventoryRunResult result = service.run();
@@ -57,7 +59,7 @@ class InventoryServiceTest {
                 RESTORED_FINGERPRINT, NOW.minus(LOOKBACK), List.of(restored));
         CapturingSource source = new CapturingSource(List.of(newlyFetched));
         InventoryService service = new InventoryService(
-                source, new CapturingReports(), checkpoints, true,
+                source, new CapturingReports(), new CapturingSnapshotStore(), checkpoints, true,
                 LOOKBACK, MAXIMUM_MESSAGES, Clock.fixed(NOW, ZoneOffset.UTC));
 
         InventoryRunResult result = service.run();
@@ -77,7 +79,7 @@ class InventoryServiceTest {
             throw new IllegalStateException(REPORT_FAILURE);
         };
         InventoryService service = new InventoryService(
-                source, failingReports, checkpoints, true,
+                source, failingReports, new CapturingSnapshotStore(), checkpoints, true,
                 LOOKBACK, MAXIMUM_MESSAGES, Clock.fixed(NOW, ZoneOffset.UTC));
 
         org.assertj.core.api.Assertions.assertThatThrownBy(service::run)
@@ -108,7 +110,8 @@ class InventoryServiceTest {
             }
         };
         InventoryService service = new InventoryService(
-                interruptedSource, new CapturingReports(), checkpoints, true,
+                interruptedSource, new CapturingReports(), new CapturingSnapshotStore(),
+                checkpoints, true,
                 LOOKBACK, MAXIMUM_MESSAGES, Clock.fixed(NOW, ZoneOffset.UTC));
 
         org.assertj.core.api.Assertions.assertThatThrownBy(service::run)
@@ -116,6 +119,70 @@ class InventoryServiceTest {
 
         assertThat(checkpoints.saved.messages()).containsExactly(completed);
         assertThat(checkpoints.wasReset).isFalse();
+    }
+
+    @Test
+    void persistsTheMessageSnapshotClassificationLaterReadsWithoutRescanning() {
+        CapturingSnapshotStore snapshots = new CapturingSnapshotStore();
+        CapturingSource source = new CapturingSource(
+                List.of(message(FIRST_ID), message(SECOND_ID)));
+        InventoryService service = new InventoryService(
+                source, new CapturingReports(), snapshots, new CapturingCheckpointStore(), true,
+                LOOKBACK, MAXIMUM_MESSAGES, Clock.fixed(NOW, ZoneOffset.UTC));
+
+        service.run();
+
+        assertThat(snapshots.load())
+                .extracting(message -> message.id().value())
+                .containsExactly(FIRST_ID, SECOND_ID);
+    }
+
+    @Test
+    void persistsTheSnapshotAtCompletedBatchBoundariesSoInterruptionKeepsFinishedWork() {
+        CapturingSnapshotStore snapshots = new CapturingSnapshotStore();
+        MailMessage completed = message(FIRST_ID);
+        MessageSource interruptedSource = new MessageSource() {
+            @Override
+            public List<MailMessage> fetchSince(Instant since) {
+                return List.of();
+            }
+
+            @Override
+            public List<MailMessage> fetchSince(
+                    Instant since,
+                    int maximumMessages,
+                    java.util.Set<MessageId> completedIds,
+                    java.util.function.Consumer<List<MailMessage>> completedBatch) {
+                completedBatch.accept(List.of(completed));
+                throw new IllegalStateException(REPORT_FAILURE);
+            }
+        };
+        InventoryService service = new InventoryService(
+                interruptedSource, new CapturingReports(), snapshots,
+                new CapturingCheckpointStore(), true,
+                LOOKBACK, MAXIMUM_MESSAGES, Clock.fixed(NOW, ZoneOffset.UTC));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(service::run)
+                .isInstanceOf(IllegalStateException.class);
+
+        assertThat(snapshots.writes).containsExactly(List.of(completed));
+    }
+
+    @Test
+    void persistsARestoredSnapshotEvenWhenNoNewMessagesAreFetched() {
+        CapturingSnapshotStore snapshots = new CapturingSnapshotStore();
+        MailMessage restored = message(FIRST_ID);
+        CapturingCheckpointStore checkpoints = new CapturingCheckpointStore();
+        checkpoints.saved = new ScanCheckpoint(
+                RESTORED_FINGERPRINT, NOW.minus(LOOKBACK), List.of(restored));
+        InventoryService service = new InventoryService(
+                new CapturingSource(List.of(restored)), new CapturingReports(), snapshots,
+                checkpoints, true,
+                LOOKBACK, MAXIMUM_MESSAGES, Clock.fixed(NOW, ZoneOffset.UTC));
+
+        service.run();
+
+        assertThat(snapshots.load()).containsExactly(restored);
     }
 
     private static MailMessage message(String id) {
@@ -165,6 +232,21 @@ class InventoryServiceTest {
                 completedBatch.accept(fetched);
             }
             return fetched;
+        }
+    }
+
+    /** Snapshot fixture recording every batch-boundary write in order. */
+    private static final class CapturingSnapshotStore implements MessageSnapshotStore {
+        private final List<List<MailMessage>> writes = new ArrayList<>();
+
+        @Override
+        public void write(List<MailMessage> messages) {
+            writes.add(List.copyOf(messages));
+        }
+
+        @Override
+        public List<MailMessage> load() {
+            return writes.isEmpty() ? List.of() : writes.get(writes.size() - 1);
         }
     }
 
