@@ -1,6 +1,7 @@
 package dev.inboxpilot.application.inventory;
 
 import dev.inboxpilot.application.port.InventoryReportStore;
+import dev.inboxpilot.application.port.MessageSnapshotStore;
 import dev.inboxpilot.application.port.MessageSource;
 import dev.inboxpilot.application.model.ScanCheckpoint;
 import dev.inboxpilot.application.model.ScanFingerprint;
@@ -24,6 +25,7 @@ public final class InventoryService {
 
     private final MessageSource messageSource;
     private final InventoryReportStore reportStore;
+    private final MessageSnapshotStore snapshotStore;
     private final CheckpointStore checkpointStore;
     private final boolean checkpointEnabled;
     private final Duration lookback;
@@ -34,6 +36,7 @@ public final class InventoryService {
     public InventoryService(
             MessageSource messageSource,
             InventoryReportStore reportStore,
+            MessageSnapshotStore snapshotStore,
             CheckpointStore checkpointStore,
             boolean checkpointEnabled,
             Duration lookback,
@@ -41,6 +44,7 @@ public final class InventoryService {
             Clock clock) {
         this.messageSource = Objects.requireNonNull(messageSource, "messageSource");
         this.reportStore = Objects.requireNonNull(reportStore, "reportStore");
+        this.snapshotStore = Objects.requireNonNull(snapshotStore, "snapshotStore");
         this.checkpointStore = Objects.requireNonNull(checkpointStore, "checkpointStore");
         this.checkpointEnabled = checkpointEnabled;
         this.lookback = Objects.requireNonNull(lookback, "lookback");
@@ -59,7 +63,12 @@ public final class InventoryService {
         messageSource.fetchSince(since, maximumMessages, completedIds, batch -> {
             messages.addAll(batch);
             save(fingerprint, since, messages);
+            snapshotStore.write(messages);
         });
+        // A resumed run that fetches nothing new never reaches the batch
+        // callback, so the snapshot is written once more here: finishing a scan
+        // must always leave a snapshot matching the aggregates just reported.
+        snapshotStore.write(messages);
         Inventory inventory = aggregator.aggregate(messages);
         InventoryRunResult result = new InventoryRunResult(
                 messages.size(), reportStore.write(inventory));

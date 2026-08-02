@@ -192,9 +192,8 @@ class InboxPilotCommandTest {
 
     private ClassificationDryRunService classificationService(MessageSource source) {
         return new ClassificationDryRunService(
-                () -> new dev.inboxpilot.domain.inventory.Inventory(List.of(), List.of()),
+                new StubSnapshotStore(),
                 ignored -> new dev.inboxpilot.domain.rules.RuleSet(1, List.of()),
-                source,
                 stubGateway,
                 report -> List.of(Path.of("/tmp/classification-dry-run-summary.json")),
                 new dev.inboxpilot.domain.rules.RuleGenerationPolicy(
@@ -209,11 +208,28 @@ class InboxPilotCommandTest {
         return new InventoryService(
                 source,
                 inventory -> List.of(java.nio.file.Path.of("/tmp/inventory.json")),
+                new StubSnapshotStore(),
                 new StubCheckpointStore(),
                 false,
                 Duration.ofDays(1),
                 10,
                 Clock.fixed(Instant.parse("2026-08-01T12:00:00Z"), ZoneOffset.UTC));
+    }
+
+    /** In-memory snapshot so CLI tests never touch the filesystem or a mailbox. */
+    private static final class StubSnapshotStore
+            implements dev.inboxpilot.application.port.MessageSnapshotStore {
+        private List<MailMessage> messages = List.of();
+
+        @Override
+        public void write(List<MailMessage> written) {
+            messages = List.copyOf(written);
+        }
+
+        @Override
+        public List<MailMessage> load() {
+            return messages;
+        }
     }
 
     private static final class StubCheckpointStore implements CheckpointStore {

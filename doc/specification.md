@@ -118,8 +118,9 @@ while exponential backoff still delays failed-item retries.
 The CLI exposes the read-only `inventory`, `labels list`, and
 `messages list --query=<gmail-query>` commands. Inventory derives its lower
 timestamp from configured lookback, stops provider pagination at the configured
-message ceiling, aggregates the metadata, writes every configured report
-format, and prints the generated paths. Labels contain their stable ID and
+message ceiling, aggregates the metadata, persists the message snapshot that
+classification later consumes, writes every configured report format, and prints
+the generated paths. Labels contain their stable ID and
 visible name, while message discovery prints IDs only. Starting the application
 without a command performs no Gmail request, preserving the unconfigured
 development startup path.
@@ -185,6 +186,19 @@ checkpoint is removed only after every configured report succeeds, while fetch
 or report failure preserves it. Resume rejects a fingerprint mismatch instead
 of combining incompatible scan state. `checkpoint reset` is the explicit
 destructive command for discarding saved progress.
+
+The message snapshot is a versioned JSON contract holding every
+provider-independent message inventory captured: message ID, sender, subject,
+received timestamp, and stable label IDs. It complements the aggregate inventory
+report, which deliberately retains only sender and domain totals and therefore
+cannot answer message-level questions. Inventory writes it at every completed
+batch boundary through a same-directory temporary file and an atomic
+replacement, so an interruption keeps completed batches, and rewrites it once
+more when a run completes so a snapshot always matches the aggregates just
+reported. Rendering is deterministic: identical messages produce identical
+bytes. A snapshot whose version marker is unrecognized is rejected rather than
+parsed speculatively. Because it is a working artifact rather than a report
+format, it is replaced independently of the configured report overwrite policy.
 
 ## Inventory aggregation
 
@@ -306,11 +320,20 @@ removals, and sorted desired labels. Sequential rule actions are reduced to the
 final desired state, so cancelling changes disappear from the diff. This domain
 operation has no mailbox port and therefore cannot write to Gmail.
 
-The `classify --dry-run` application use case loads inventory bounds and a
-validated rule file, fetches read-only metadata, resolves current label IDs to
-visible names, and writes summary, change, conflict, and unmatched reports.
-Identical actions from multiple matches are not conflicts; incompatible label
-actions are. The use case has no mutation or checkpoint dependency.
+The `classify --dry-run` application use case loads a validated rule file and
+the persisted message snapshot, resolves current label IDs to visible names, and
+writes summary, change, conflict, and unmatched reports. Identical actions from
+multiple matches are not conflicts; incompatible label actions are. The use case
+has no mutation or checkpoint dependency.
+
+Dry-run reads messages only from the local snapshot and never from the mailbox.
+It holds no message-source port, so it cannot degrade into a mailbox-wide
+metadata rescan; its single Gmail request is the label-list call needed to name
+labels. Repeated runs against an unchanged snapshot therefore issue no
+message-list or message-get request and produce identical reports. An absent or
+version-incompatible snapshot — including a report directory holding only the
+aggregate-only inventory of an earlier release — fails immediately with an
+instruction to run `inventory`, never a silent fallback to fetching.
 
 Classification assessment partitions every dry-run message into exactly one
 review bucket: `clean` for one matched rule, `ambiguous` for multiple matched
