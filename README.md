@@ -88,8 +88,25 @@ Analyze the completed local inventory:
 ```
 
 Run `inventory` first. The command reads `reports/inventory.json` locally and
-reports processed messages plus unclassified senders and domains. It performs
-no OAuth or Gmail request and never mutates mail.
+performs no OAuth or Gmail request. It creates:
+
+```text
+reports/
+├── summary.json
+├── unlabeled-senders.csv
+├── label-conflicts.csv
+├── cleanup-candidates.csv
+└── rule-suggestions.yaml
+```
+
+`unlabeled-senders.csv` ranks sender aggregates lacking user labels.
+`label-conflicts.csv` flags senders carrying multiple user labels for review.
+`cleanup-candidates.csv` contains high-volume unlabeled sender evidence only;
+because inventory is aggregated, it deliberately contains no invented message
+IDs and cannot be executed as a cleanup plan. `rule-suggestions.yaml` contains
+deterministic starter rules for high-volume mappings to exactly one observed
+user-label ID and must be reviewed before classification. Existing derived
+reports follow `inboxpilot.reports.overwrite`.
 
 The command scans the configured lookback window up to `scanning.max-messages`,
 then prints the processed count and every generated report path.

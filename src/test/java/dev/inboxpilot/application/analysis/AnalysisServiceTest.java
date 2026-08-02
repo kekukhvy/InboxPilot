@@ -9,6 +9,7 @@ import dev.inboxpilot.domain.inventory.InventoryStatistics;
 import dev.inboxpilot.domain.inventory.SenderInventory;
 import dev.inboxpilot.domain.message.EmailAddress;
 import java.time.Instant;
+import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -21,15 +22,18 @@ class AnalysisServiceTest {
     private static final int UNCLASSIFIED_MESSAGES = 3;
     private static final String CLASSIFIED_SENDER = "work@example.com";
     private static final String UNCLASSIFIED_SENDER = "news@example.org";
+    private static final Path SUMMARY_PATH = Path.of("reports/summary.json");
 
     @Test
     void analyzesOnlyThePersistedInventorySnapshot() {
         InventorySnapshotStore store = () -> inventory();
 
-        AnalysisRunResult result = new AnalysisService(store).run();
+        AnalysisRunResult result = new AnalysisService(
+                store, report -> List.of(SUMMARY_PATH)).run();
 
         assertThat(result).isEqualTo(new AnalysisRunResult(
-                CLASSIFIED_MESSAGES + UNCLASSIFIED_MESSAGES, 1, 1));
+                CLASSIFIED_MESSAGES + UNCLASSIFIED_MESSAGES, 1, 1,
+                List.of(SUMMARY_PATH)));
     }
 
     private static Inventory inventory() {

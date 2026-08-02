@@ -132,6 +132,16 @@ malformed inventory fails with an instruction to run `inventory` first. Label
 name structure requires a future persisted label snapshot and is not fabricated
 from IDs alone.
 
+Local analysis writes five deterministic review artifacts in the configured
+report directory: `summary.json`, `unlabeled-senders.csv`,
+`label-conflicts.csv`, `cleanup-candidates.csv`, and `rule-suggestions.yaml`.
+Potential label conflicts are exact senders carrying at least two observed user
+label IDs. Cleanup candidates are high-volume unlabeled sender aggregates and
+contain counts and evidence, never invented message IDs or an executable
+operation. Starter rules are generated only for high-volume sender/domain
+mappings with exactly one observed user label. All derived files obey the
+configured overwrite policy.
+
 ## Persisted contracts
 
 OAuth refresh-token persistence is owned by Google's file data-store

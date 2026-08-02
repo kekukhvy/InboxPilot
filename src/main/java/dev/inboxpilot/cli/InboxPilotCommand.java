@@ -123,7 +123,7 @@ public class InboxPilotCommand implements ApplicationRunner {
             return renderInventory(inventoryService.run());
         }
         if (commandParts.equals(List.of(ANALYZE_COMMAND))) {
-            return List.of(renderAnalysis(analysisService.run()));
+            return renderAnalysis(analysisService.run());
         }
         if (isCommand(commandParts, MESSAGES_COMMAND)) {
             return mailboxGateway.listMessageIds(requireQuery(arguments)).stream()
@@ -176,10 +176,15 @@ public class InboxPilotCommand implements ApplicationRunner {
         return List.copyOf(output);
     }
 
-    private static String renderAnalysis(AnalysisRunResult result) {
-        return ANALYSIS_SUMMARY.formatted(
+    private static List<String> renderAnalysis(AnalysisRunResult result) {
+        java.util.ArrayList<String> output = new java.util.ArrayList<>();
+        output.add(ANALYSIS_SUMMARY.formatted(
                 result.processedMessages(),
                 result.unclassifiedSenders(),
-                result.unclassifiedDomains());
+                result.unclassifiedDomains()));
+        result.reports().stream()
+                .map(path -> REPORT_PREFIX + path.toAbsolutePath())
+                .forEach(output::add);
+        return List.copyOf(output);
     }
 }
