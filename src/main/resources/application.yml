@@ -80,3 +80,12 @@ inboxpilot:
     enabled: true
     file: ${INBOXPILOT_CHECKPOINT_FILE:./.inboxpilot/checkpoint.json}
     interval: 500
+
+  rule-generation:
+    excluded-domains:
+      - privaterelay.appleid.com
+    known-domain-mappings:
+      e-autopalyamatrica.hu: Mobility/Tolls
+    sender-rule-allowlist: []
+    minimum-message-count: 20
+    approved-rules-file: ./rules/approved-rules.yaml

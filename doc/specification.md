@@ -134,9 +134,11 @@ run `inventory` first. An inventory label ID absent from the current catalog is
 reported as an incompatibility rather than exposed or assigned a fabricated
 name.
 
-Local analysis writes five deterministic review artifacts in the configured
+Local analysis writes seven deterministic review artifacts in the configured
 report directory: `summary.json`, `unlabeled-senders.csv`,
-`label-conflicts.csv`, `cleanup-candidates.csv`, and `rule-suggestions.yaml`.
+`label-conflicts.csv`, `cleanup-candidates.csv`,
+`rejected-rule-suggestions.csv`, `rule-validation-errors.csv`, and
+`rule-suggestions.yaml`.
 Potential label conflicts are exact senders carrying at least two observed user
 label IDs. Cleanup candidates are high-volume unlabeled sender aggregates and
 contain counts and evidence, never invented message IDs or an executable
@@ -146,6 +148,19 @@ action uses the visible label name. Stable `Label_*` IDs are provider details;
 explicit execution resolves each name against the current Gmail catalog and
 rejects missing or duplicate names before mutation. All derived files obey the
 configured overwrite policy.
+
+Domain suggestions respect a configurable exclusion list. Excluded broad
+domains are retained only as rejected evidence, while exact-sender suggestions
+remain eligible. Configured known-domain mappings may propose a logical label
+that does not yet exist. A plain exact sender is removed when the same domain
+rule has identical actions; composite conditions, different actions, and
+allowlisted senders remain. Summary counts distinguish generated, rejected,
+deduplicated, and final suggestions. Validation errors prevent suggestion YAML
+from being written and are persisted to the validation CSV.
+
+`reports/rule-suggestions.yaml` is review output. Classification reads
+`rules/approved-rules.yaml` by default and accepts suggestions only through an
+explicit path. The CLI currently accepts classification only with `--dry-run`.
 
 ## Persisted contracts
 
@@ -259,8 +274,10 @@ Composite rule conditions use recursive `all`, `any`, and `not` nodes. `all`
 and `any` require at least one ordered operand; `not` requires exactly one.
 Evaluation is deterministic and short-circuits operands from left to right.
 
-Rules evaluate by descending numeric priority, with ascending rule ID as the
-stable tie-breaker. Every matching rule contributes its action specifications;
+Rules evaluate by descending numeric priority, then descending specificity, with
+ascending rule ID as the stable tie-breaker. Composite sender conditions rank
+ahead of exact senders, exact senders ahead of subdomains, and subdomains ahead
+of root domains. Every matching rule contributes its action specifications;
 a matching `stop` rule contributes its own actions and then prevents all lower
 ordered rules from being considered. Non-matching stop rules have no effect.
 
@@ -285,6 +302,12 @@ label-state plan per message: matched rule IDs, sorted old labels, additions,
 removals, and sorted desired labels. Sequential rule actions are reduced to the
 final desired state, so cancelling changes disappear from the diff. This domain
 operation has no mailbox port and therefore cannot write to Gmail.
+
+The `classify --dry-run` application use case loads inventory bounds and a
+validated rule file, fetches read-only metadata, resolves current label IDs to
+visible names, and writes summary, change, conflict, and unmatched reports.
+Identical actions from multiple matches are not conflicts; incompatible label
+actions are. The use case has no mutation or checkpoint dependency.
 
 Classification assessment partitions every dry-run message into exactly one
 review bucket: `clean` for one matched rule, `ambiguous` for multiple matched

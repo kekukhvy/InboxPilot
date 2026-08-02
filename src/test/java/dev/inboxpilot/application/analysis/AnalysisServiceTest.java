@@ -11,6 +11,7 @@ import dev.inboxpilot.domain.inventory.InventoryStatistics;
 import dev.inboxpilot.domain.inventory.SenderInventory;
 import dev.inboxpilot.domain.message.EmailAddress;
 import dev.inboxpilot.domain.message.MessageId;
+import dev.inboxpilot.domain.rules.RuleGenerationPolicy;
 import java.time.Instant;
 import java.nio.file.Path;
 import java.util.List;
@@ -38,12 +39,13 @@ class AnalysisServiceTest {
                 store, report -> {
                     captured.set(report);
                     return List.of(SUMMARY_PATH);
-                }, gateway()).run();
+                }, gateway(), new RuleGenerationPolicy(
+                        java.util.Set.of(), java.util.Map.of(), java.util.Set.of(), 20)).run();
 
         assertThat(result).isEqualTo(new AnalysisRunResult(
                 CLASSIFIED_MESSAGES + UNCLASSIFIED_MESSAGES, 1, 1,
                 List.of(SUMMARY_PATH)));
-        assertThat(captured.get().ruleSuggestions().rules())
+        assertThat(captured.get().ruleGeneration().rules().rules())
                 .allSatisfy(rule -> assertThat(rule.actions().getFirst().parameters())
                         .containsEntry("label", USER_LABEL_NAME));
     }

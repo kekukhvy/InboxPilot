@@ -30,6 +30,7 @@ public record InboxPilotProperties(
         @Valid @NotNull BatchingProperties batching,
         @Valid @NotNull ReportProperties reports,
         @Valid @NotNull CheckpointProperties checkpoints,
+        @Valid @NotNull RuleGenerationProperties ruleGeneration,
         @Valid @NotNull AiProperties ai,
         @Valid @NotNull DashboardProperties dashboard) {
 

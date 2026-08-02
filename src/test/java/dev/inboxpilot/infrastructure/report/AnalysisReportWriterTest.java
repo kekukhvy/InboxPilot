@@ -9,6 +9,9 @@ import dev.inboxpilot.domain.inventory.InventoryStatistics;
 import dev.inboxpilot.domain.inventory.SenderInventory;
 import dev.inboxpilot.domain.message.EmailAddress;
 import dev.inboxpilot.domain.rules.RuleSet;
+import dev.inboxpilot.domain.rules.RuleGenerationResult;
+import dev.inboxpilot.domain.rules.RuleValidationFinding;
+import dev.inboxpilot.domain.rules.RuleValidationSeverity;
 import dev.inboxpilot.infrastructure.config.ReportFormat;
 import dev.inboxpilot.infrastructure.config.ReportProperties;
 import java.nio.file.Files;
@@ -42,6 +45,8 @@ class AnalysisReportWriterTest {
         assertThat(paths).extracting(path -> path.getFileName().toString())
                 .containsExactly("summary.json", "unlabeled-senders.csv",
                         "label-conflicts.csv", "cleanup-candidates.csv",
+                        "rejected-rule-suggestions.csv",
+                        "rule-validation-errors.csv",
                         "rule-suggestions.yaml");
         assertThat(Files.readString(directory.resolve("summary.json")))
                 .contains("\"processedMessages\":25");
@@ -53,6 +58,26 @@ class AnalysisReportWriterTest {
                 .contains(REASON);
         assertThat(Files.readString(directory.resolve("rule-suggestions.yaml")))
                 .startsWith("version: 1\nrules:");
+    }
+
+    @Test
+    void removesStaleSuggestionsAndWritesValidationErrors() throws Exception {
+        Files.writeString(directory.resolve("rule-suggestions.yaml"), "unsafe");
+        AnalysisReport source = report();
+        AnalysisReport invalid = new AnalysisReport(
+                source.processedMessages(), source.unlabeledSenders(), source.labelConflicts(),
+                source.cleanupCandidates(), source.ruleGeneration(),
+                List.of(new RuleValidationFinding(
+                        "unsafe", RuleValidationSeverity.ERROR,
+                        "excluded-domain", "Unsafe broad rule")));
+        AnalysisReportWriter writer = new AnalysisReportWriter(
+                new ReportProperties(directory, List.of(ReportFormat.JSON), true));
+
+        writer.write(invalid);
+
+        assertThat(directory.resolve("rule-suggestions.yaml")).doesNotExist();
+        assertThat(Files.readString(directory.resolve("rule-validation-errors.csv")))
+                .contains("unsafe", "ERROR", "excluded-domain");
     }
 
     private static AnalysisReport report() {
@@ -67,6 +92,9 @@ class AnalysisReportWriterTest {
                         sender, List.of(LABEL_ONE, LABEL_TWO), MESSAGE_COUNT)),
                 List.of(new AnalysisCleanupCandidate(
                         sender, MESSAGE_COUNT, UNREAD_COUNT, REASON)),
-                new RuleSet(RuleSet.CURRENT_VERSION, List.of()));
+                new RuleGenerationResult(
+                        new RuleSet(RuleSet.CURRENT_VERSION, List.of()),
+                        List.of(), 0, 0),
+                List.of());
     }
 }
