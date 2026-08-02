@@ -2,6 +2,7 @@ package dev.inboxpilot.infrastructure.config;
 
 import dev.inboxpilot.application.analysis.AnalysisService;
 import dev.inboxpilot.application.port.InventorySnapshotStore;
+import dev.inboxpilot.application.port.AnalysisReportStore;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -10,7 +11,8 @@ import org.springframework.context.annotation.Configuration;
 public class AnalysisConfiguration {
 
     @Bean
-    AnalysisService analysisService(InventorySnapshotStore inventoryStore) {
-        return new AnalysisService(inventoryStore);
+    AnalysisService analysisService(
+            InventorySnapshotStore inventoryStore, AnalysisReportStore reportStore) {
+        return new AnalysisService(inventoryStore, reportStore);
     }
 }

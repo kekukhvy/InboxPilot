@@ -146,8 +146,10 @@ class InboxPilotCommandTest {
     @DisplayName("runs read-only mailbox analysis")
     void runsAnalysis() {
         assertThat(command().execute(ANALYZE_ARGUMENT))
-                .containsExactly("Analysis complete: 0 messages, 0 unclassified senders, "
-                        + "0 unclassified domains");
+                .containsExactly(
+                        "Analysis complete: 0 messages, 0 unclassified senders, "
+                                + "0 unclassified domains",
+                        "Report: /tmp/summary.json");
     }
 
     private InboxPilotCommand command() {
@@ -158,7 +160,8 @@ class InboxPilotCommandTest {
 
     private AnalysisService analysisService(MessageSource source) {
         return new AnalysisService(() -> new dev.inboxpilot.domain.inventory.Inventory(
-                List.of(), List.of()));
+                List.of(), List.of()), report -> List.of(
+                        java.nio.file.Path.of("/tmp/summary.json")));
     }
 
     private static InventoryService inventoryService(MessageSource source) {
