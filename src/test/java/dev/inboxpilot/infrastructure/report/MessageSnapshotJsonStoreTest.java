@@ -78,6 +78,21 @@ class MessageSnapshotJsonStoreTest {
         assertThat(store.load()).hasSize(2);
     }
 
+    /**
+     * A real mailbox snapshot is megabytes: 22 907 messages produced a 5 MB file,
+     * well past the parser's 3 MB default document ceiling. The reader must size
+     * itself to the mailbox, not to the aggregate reports it was modelled on.
+     */
+    @Test
+    void readsASnapshotLargerThanTheParserDefaultDocumentLimit() {
+        MessageSnapshotJsonStore store = store();
+        List<MailMessage> messages = largeSnapshot();
+
+        store.write(messages);
+
+        assertThat(store.load()).isEqualTo(messages);
+    }
+
     @Test
     void missingSnapshotFailsWithAnInstructionToRunInventory() {
         assertThatExceptionOfType(MessageSnapshotStoreException.class)
@@ -106,6 +121,19 @@ class MessageSnapshotJsonStoreTest {
 
     private MessageSnapshotJsonStore store() {
         return new MessageSnapshotJsonStore(directory.resolve(SNAPSHOT_FILE));
+    }
+
+    /** Builds a snapshot comfortably past the 3 MB parser default. */
+    private static List<MailMessage> largeSnapshot() {
+        String subject = "Security alert ".repeat(20);
+        return java.util.stream.IntStream.range(0, 25_000)
+                .mapToObj(index -> new MailMessage(
+                        new MessageId("msg-" + index),
+                        new EmailAddress("sender" + index + "@example.com"),
+                        subject + index,
+                        RECEIVED_AT.plusSeconds(index),
+                        List.of("Label_1", "INBOX")))
+                .toList();
     }
 
     private static MailMessage message(String subject) {

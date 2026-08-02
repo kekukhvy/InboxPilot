@@ -38,6 +38,13 @@ public final class MessageSnapshotJsonStore implements MessageSnapshotStore {
 
     static final int FORMAT_VERSION = 1;
 
+    /**
+     * Ceiling on a readable snapshot, in code points. Roughly 512 MB — about two
+     * million messages at observed sizes — chosen to be far beyond any real
+     * mailbox while still refusing a runaway or corrupt file.
+     */
+    private static final int MAXIMUM_SNAPSHOT_CODE_POINTS = 512 * 1024 * 1024;
+
     private static final String SNAPSHOT_FILE = "messages.json";
     private static final String TEMP_SUFFIX = ".tmp";
     private static final String RERUN_INSTRUCTION =
@@ -70,7 +77,19 @@ public final class MessageSnapshotJsonStore implements MessageSnapshotStore {
 
     MessageSnapshotJsonStore(Path path) {
         this.path = path;
-        this.yaml = new Yaml(new SafeConstructor(new LoaderOptions()));
+        this.yaml = new Yaml(new SafeConstructor(loaderOptions()));
+    }
+
+    /**
+     * The snapshot is sized by the mailbox, not by a document convention: a
+     * 22 000-message scan already produces about 5 MB, past the parser's 3 MB
+     * default ceiling. The limit is raised rather than removed, so a corrupt
+     * file still fails instead of exhausting memory.
+     */
+    private static LoaderOptions loaderOptions() {
+        LoaderOptions options = new LoaderOptions();
+        options.setCodePointLimit(MAXIMUM_SNAPSHOT_CODE_POINTS);
+        return options;
     }
 
     @Override
