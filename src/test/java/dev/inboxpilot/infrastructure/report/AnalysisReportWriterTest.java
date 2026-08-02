@@ -80,6 +80,25 @@ class AnalysisReportWriterTest {
                 .contains("unsafe", "ERROR", "excluded-domain");
     }
 
+    @Test
+    void repeatedAnalysisReplacesOnlyItsDerivedArtifacts() throws Exception {
+        Path inventory = directory.resolve("inventory.json");
+        String inventorySnapshot = "persisted inventory";
+        Files.writeString(inventory, inventorySnapshot);
+        ReportProperties properties = new ReportProperties(
+                directory, List.of(ReportFormat.JSON), false);
+        AnalysisReportWriter writer = new AnalysisReportWriter(properties);
+
+        writer.write(report());
+        writer.write(report());
+
+        assertThat(Files.readString(directory.resolve("summary.json")))
+                .contains("\"processedMessages\":25");
+        assertThat(Files.readString(inventory)).isEqualTo(inventorySnapshot);
+        assertThat(directory).isDirectoryContaining(
+                path -> path.getFileName().toString().equals("rule-suggestions.yaml"));
+    }
+
     private static AnalysisReport report() {
         EmailAddress sender = new EmailAddress(SENDER);
         SenderInventory unlabeled = new SenderInventory(sender, new InventoryStatistics(
